@@ -6,11 +6,11 @@ function make_landmarks(nlandmarks::Int, boundaries, margin)
 end
 
 
-function nearby_landmark_indices(x, lm, rmax)
+function nearby_landmark_indices(pose, lm, rmax)
     # Return indices of landmarks within sensor acceptance
-    dx = lm[1,:] - x[1]
-    dy = lm[2,:] - x[2]
-    phi = x[3]
+    dx = lm[1,:] - pose[1]
+    dy = lm[2,:] - pose[2]
+    phi = pose[3]
 
     inearby = Array{Int}(0)
     for i in 1:size(lm, 2)
@@ -52,15 +52,15 @@ function add_observation_noise(z, R)
 end
 
 
-function get_observations(x, lm, landmark_tags, rmax, R)
+function get_observations(pose, lm, landmark_tags, rmax, R)
     # Return array with columns z = [range; angle] for all nearby landmark 
     # observations as well as the corresponding list of landmark IDs.
 
-    inearby = nearby_landmark_indices(x, lm, rmax)
+    inearby = nearby_landmark_indices(pose, lm, rmax)
     
-    dx  = lm[1,inearby] - x[1]
-    dy  = lm[2,inearby] - x[2]
-    phi = x[3]
+    dx  = lm[1,inearby] - pose[1]
+    dy  = lm[2,inearby] - pose[2]
+    phi = pose[3]
 
     z = add_observation_noise([sqrt(dx.^2 + dy.^2); atan2(dy, dx) - phi], R)
     z, landmark_tags[inearby]
