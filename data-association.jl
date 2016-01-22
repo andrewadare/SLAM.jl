@@ -52,7 +52,7 @@ end
 function compute_association(x, P, z, R, idf)
     # Return normalised innovation squared (ie, Mahalanobis distance) and 
     # normalised distance
-    zp, H = observe_model(x, idf)
+    zp, H = predict_observation(x, idf)
     v = z - zp
     v[2] = mpi_to_pi(v[2])
     S = H*P*H' + R

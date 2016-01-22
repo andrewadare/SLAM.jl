@@ -94,7 +94,7 @@ function batch_update!(state::SlamState, z, R, idf)
     RR = zeros(2*lenz, 2*lenz)
     for i = 1:lenz
         ii = 2*i + (-1:0)
-        zp, H[ii,:] = observe_model(x, idf[i])
+        zp, H[ii,:] = predict_observation(x, idf[i])
         
         v[ii] = [z[1,i] - zp[1]; mpi_to_pi(z[2,i] - zp[2])]
         RR[ii,ii] = R
