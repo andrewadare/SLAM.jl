@@ -10,9 +10,6 @@ export
     # Functions
     mpi_to_pi,
     frame_transform,
-    ellipse,
-    compute_landmark_ellipses,
-    laser_lines,
     augment!,
     step_vehicle!,
     steer!,

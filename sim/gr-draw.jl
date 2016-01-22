@@ -136,3 +136,46 @@ function draw_laser_lines(z, pose)
     end
 end
 
+function ellipse(x, P, nsigma, nsegs)
+    # Make a single 2D n-sigma Gaussian contour centered at x with axes given
+    # by covariance matrix P
+
+    # Approximate smooth ellipse with nsegs line segments (nsegs + 1 points)
+    phi = 0:2*pi/nsegs:2*pi
+
+    nsigma*sqrtm(P)*[cos(phi)'; sin(phi)'] .+ x[1:2]
+end
+
+
+function compute_landmark_ellipses(x, P)
+    nsigma = 2 # Size of ellipse
+    nsegs = 12 # Number of line segments to use
+
+    # Number of observed features/landmarks
+    nf = floor(Int, (length(x) - 3)/2)
+
+    # Allocate rows for x,y and columns for npoints/ellipse times # ellipses
+    ellipses = Array{Float64}(2*nf, nsegs + 1)
+
+    for i = 1:nf
+        j = (2*i + 2):(2*i + 3)
+
+        ell = ellipse(x[j], P[j,j], nsigma, nsegs)
+        ellipses[2i-1:2i, :] = ellipse(x[j], P[j,j], nsigma, nsegs)
+    end
+    ellipses
+end
+
+
+function laser_lines(z,x)
+    # Return array of line segments for laser range-bearing measurements.
+    # Columns contain vehicle and feature positions [vx; vy; fx; fy]
+    len = size(z, 2)
+    lines = Array{Float64}(4, len)
+    lines[1,:] = zeros(1, len) + x[1]
+    lines[2,:] = zeros(1, len) + x[2]
+    lines[3:4,:] = frame_transform([z[1,:].*cos(z[2,:]); z[1,:].*sin(z[2,:])], x)
+    lines
+end
+
+
