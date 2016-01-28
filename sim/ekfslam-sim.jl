@@ -80,6 +80,11 @@ function main()
     init_plot_window(boundaries)
     # GR.endprint()
 
+    draw_map(lm, wp)
+
+    # Uncomment to wait for user input (any key)    
+    # readline(STDIN)
+
     ellipses = []
 
     while vehicle.waypoint_id != 0
