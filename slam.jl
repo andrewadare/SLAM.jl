@@ -12,11 +12,11 @@ export
     # Functions
     mpi_to_pi,
     frame_transform,
-    augment!,
     step_vehicle!,
     steer!,
     predict,
-    batch_update!,
+    update,
+    add_features,
     associate,
     compute_association,
     predict_observation
