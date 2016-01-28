@@ -43,7 +43,7 @@ function predict(state::EKFSlamState, vehicle::Vehicle, Q::AbstractMatrix, dt::A
 end
 
 
-function batch_update!(state::SlamState, z, R, idf)
+function update(state::EKFSlamState, z, R, idf)
     x = state.x
     P = state.cov
 
@@ -71,7 +71,52 @@ function batch_update!(state::SlamState, z, R, idf)
     W1 = PHt*C
     W = W1*C'
 
-    state.x += W*v 
-    state.cov -= W1*W1'
+    x += W*v
+    P -= W1*W1'
+    x, P
+end
 
+
+"""
+Add new feature/landmark measurements z and return augmented state
+vector x and covariance matrix P
+"""
+function add_features(state::EKFSlamState, z, R)
+
+    x = state.x
+    P = state.cov
+    phi = x[3]
+
+    for i = 1:size(z, 2)
+        len = length(x)
+
+        # Range and bearing measurement i
+        r, b = z[1,i], z[2,i]
+
+        s, c = sin(phi + b), cos(phi + b)
+
+        # augment x
+        x = [x; x[1] + r*c; x[2] + r*s]
+
+        # jacobians
+        Gv = [1 0 -r*s; 0 1 r*c]
+        Gz = [c -r*s; s r*c]
+
+        # Augment P
+        # TODO: Implement resizing more efficiently(?) For ideas, see
+        # https://groups.google.com/forum/#!topic/julia-users/B4OUYPFM5L8
+        P = hcat(P, zeros(size(P, 1), 2))
+        P = vcat(P, zeros(2, size(P, 2)))
+
+        rng = len+1:len+2
+        P[rng,rng] = Gv*P[1:3,1:3]*Gv' + Gz*R*Gz' # feature cov
+        P[rng,1:3] = Gv*P[1:3,1:3] # vehicle to feature xcorr
+        P[1:3,rng] = P[rng,1:3]'
+        if len > 3
+            rnm = 4:len
+            P[rng,rnm] = Gv*P[1:3,rnm] # map to feature xcorr
+            P[rnm,rng] = P[rng,rnm]'
+        end
+    end
+    x, P
 end
