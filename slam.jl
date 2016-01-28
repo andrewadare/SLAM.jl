@@ -5,6 +5,8 @@ module SLAM
 export
     # Types
     SlamState,
+    EKFSlamState,
+    PFSlamState,
     Vehicle,
     
     # Functions

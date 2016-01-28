@@ -2,11 +2,28 @@
 
 ## Core Types ##
 
-type SlamState{T<:Real}
-    x::Vector{T}
-    cov::Matrix{T}
-    # landmarks?
+# type SlamState{T<:Real}
+#     x::Vector{T}
+#     cov::Matrix{T}
+#     # landmarks?
+# end
+
+abstract SlamState
+
+# Extended Kalman Filter SLAM state and covariance
+type EKFSlamState{T<:Real} <: SlamState
+    x::Vector{T}                       # Joint pose + feature state
+    cov::Matrix{T}                     # Joint pose + feature cov matrix
 end
+
+# Particle Filter SLAM state and covariance
+type PFSlamState{T<:Real} <: SlamState
+    pose::Vector{T}                    # Inferred vehicle pose e.g. [x, y, phi]
+    features::Matrix{T}                # Columns are feature/landmark positions
+    pcov::Matrix{T}                    # Pose covariance matrix
+    fcov::Matrix{T}                    # Feature/landmark cov matrix
+end
+
 
 
 ## Shared functions ##

@@ -34,8 +34,9 @@ function main()
     ## SLAM state vector ## 
     # First three elements comprise the SLAM vehicle pose; state is augmented as 
     # new landmarks are observed. Covariance matrix is also augmented during simulation.
-    state = SlamState(initial_pose, zeros(3,3))
-    
+    # state = SlamState(initial_pose, zeros(3,3))
+    state = EKFSlamState(initial_pose, zeros(3,3))
+
     ## Vehicle ##
     vehicle = Vehicle()
     vehicle.wheelbase = 4.0            # [m]
