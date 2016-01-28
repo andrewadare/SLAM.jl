@@ -34,7 +34,6 @@ function main()
     ## SLAM state vector ## 
     # First three elements comprise the SLAM vehicle pose; state is augmented as 
     # new landmarks are observed. Covariance matrix is also augmented during simulation.
-    # state = SlamState(initial_pose, zeros(3,3))
     state = EKFSlamState(initial_pose, zeros(3,3))
 
     ## Vehicle ##
@@ -106,7 +105,7 @@ function main()
         add_control_noise!(vehicle, Q)
        
         # Prediction update for state vector and covariance
-        ekf_predict!(state, vehicle, QE, dt)
+        state.x, state.cov = predict(state, vehicle, QE, dt)
 
         dtsum += dt
 

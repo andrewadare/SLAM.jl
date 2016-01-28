@@ -1,20 +1,20 @@
-function ekf_predict!(state::SlamState, vehicle::Vehicle, Q::AbstractMatrix, dt::AbstractFloat)
-    #  x, P - SLAM state vector and covariance matrix
-    #  speed, gamma - control inputs: vehicle speed and steer angle
-    #  Q - covariance matrix for speed and gamma
-    #  wheelbase - vehicle wheelbase
-    #  dt - timestep
-    #
-    #  x,P are modified in-place (!) to be the predicted state and covariance
+"""
+predict(state::EKFSlamState, vehicle::Vehicle, Q::AbstractMatrix, dt::AbstractFloat)
 
-    # Abbreviations
-    phi = state.x[3]
+Predict SLAM pose and covariance matrix according to equations of motion for vehicle.
+Q is the covariance matrix for speed and steering angle gamma.
+dt is the timestep
+"""
+function predict(state::EKFSlamState, vehicle::Vehicle, Q::AbstractMatrix, dt::AbstractFloat)
+
+    x = state.x
     P = state.cov
+    phi = x[3]
+
     g = vehicle.measured_gamma
     v = vehicle.measured_speed
     w = vehicle.wheelbase
 
-    # Cached intermediates
     s = sin(g + phi)
     c = cos(g + phi)
     vts = v*dt*s
@@ -34,51 +34,11 @@ function ekf_predict!(state::SlamState, vehicle::Vehicle, Q::AbstractMatrix, dt:
         P[1:3,4:end] = Gv*P[1:3,4:end]
         P[4:end,1:3] = P[1:3,4:end]'
     end
-    state.cov = P
 
     # Predict pose
-    state.x[1:3] = [state.x[1] + vtc; 
-                    state.x[2] + vts;
-                    mpi_to_pi(phi + v*dt*sin(g)/w)]
-end
-
-
-function ekf_predict!(x, P, speed, gamma, Q, wheelbase, dt)
-    #  x, P - SLAM state vector and covariance matrix
-    #  speed, gamma - control inputs: vehicle speed and steer angle
-    #  Q - covariance matrix for speed and gamma
-    #  wheelbase - vehicle wheelbase
-    #  dt - timestep
-    #
-    #  x,P are modified in-place (!) to be the predicted state and covariance
-    
-    phi = x[3]
-
-    # Cached intermediates
-    s = sin(gamma + phi)
-    c = cos(gamma + phi)
-    vts = speed*dt*s
-    vtc = speed*dt*c
-
-    # Jacobians   
-    Gv = [1 0 -vts;
-          0 1 vtc;
-          0 0 1]
-    Gu = [dt*c -vts;
-          dt*s  vtc;
-          dt*sin(gamma)/wheelbase speed*dt*cos(gamma)/wheelbase]
-  
-    # Predict covariance
-    P[1:3,1:3] = Gv*P[1:3,1:3]*Gv' + Gu*Q*Gu'
-    if size(P, 1) > 3
-        P[1:3,4:end] = Gv*P[1:3,4:end]
-        P[4:end,1:3] = P[1:3,4:end]'
-    end    
-
-    # Predict state (the pose component)
     x[1:3] = [x[1] + vtc; 
               x[2] + vts;
-              mpi_to_pi(phi + speed*dt*sin(gamma)/wheelbase)]
+              mpi_to_pi(phi + v*dt*sin(g)/w)]
     x, P
 end
 
