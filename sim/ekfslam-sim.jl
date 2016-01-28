@@ -117,10 +117,10 @@ function main()
             zf, idf, zn = associate(state, z, RE, gate_rej, gate_add)
 
             # Update SLAM state
-            batch_update!(state, zf, RE, idf)
+            state.x, state.cov = update(state, zf, RE, idf)
 
             # Add z measurements to the SLAM state vector and its covariance
-            augment!(state, zn, RE)
+            state.x, state.cov = add_features(state, zn, RE)
         end
 
         # Visualize
