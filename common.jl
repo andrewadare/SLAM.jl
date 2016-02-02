@@ -34,7 +34,15 @@ type PFSlamState{T<:Real} <: SlamState
 end
 
 
-## Shared functions ##
+## Functions ##
+
+"""
+Read x,y positions from 2-column text file and return as 2 x N array
+"""
+function get_waypoints(txtfile::AbstractString)
+    wp, _ = readdlm(txtfile, header=true)
+    wp = wp'
+end
 
 """
 Initial [x, y, phi] at first waypoint, heading for second waypoint
