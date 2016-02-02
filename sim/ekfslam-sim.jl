@@ -15,29 +15,33 @@ include("gr-draw.jl")
 const BOUNDARIES = [0.; 100; 0; 100]
 const N_LANDMARKS = 10::Int
 
-scene = Scene(BOUNDARIES,
-              get_waypoints(joinpath(slam_dir, "course1.txt")),
-              make_landmarks(N_LANDMARKS, BOUNDARIES, 0.05),
-              Array{Float64}(3, 10000),
-              Array{Float64}(3, 10000),
-              0)
+function ekfsim_setup()
+    scene = Scene(BOUNDARIES,
+                  get_waypoints(joinpath(slam_dir, "course1.txt")),
+                  make_landmarks(N_LANDMARKS, BOUNDARIES, 0.05),
+                  Array{Float64}(3, 10000),
+                  Array{Float64}(3, 10000),
+                  0)
 
-## Vehicle ##
-vehicle = Vehicle()
-vehicle.wheelbase = 4.0            # [m]
-vehicle.max_gamma = 60*pi/180      # [rad] max steering angle (-max < g < max)
-vehicle.steer_rate = 60*pi/180     # [rad/s] max rate of change in steer angle
-vehicle.pose = initial_pose(scene)
-vehicle.target_speed = 8           # [m/s]
-vehicle.waypoint_id = 1            # Initialize to index of first waypoint
-vehicle.shape = [1. -1 -1; 0 1 -1] # A little triangle for visualization
+    # Vehicle
+    vehicle = Vehicle()
+    vehicle.wheelbase = 4.0            # [m]
+    vehicle.max_gamma = 60*pi/180      # [rad] max steering angle (-max < g < max)
+    vehicle.steer_rate = 60*pi/180     # [rad/s] max rate of change in steer angle
+    vehicle.pose = initial_pose(scene)
+    vehicle.target_speed = 8           # [m/s]
+    vehicle.waypoint_id = 1            # Initialize to index of first waypoint
+    vehicle.shape = [1. -1 -1; 0 1 -1] # A little triangle for visualization
 
-## SLAM state vector ## 
-# First three elements comprise the SLAM vehicle pose; state is augmented as 
-# new landmarks are observed. Covariance matrix is also augmented during simulation.
-state = EKFSlamState(vehicle.pose, zeros(3,3))
+    # SLAM state vector
+    # First three elements comprise the SLAM vehicle pose; state is augmented as
+    # new landmarks are observed. Covariance matrix is also augmented during simulation.
+    state = EKFSlamState(vehicle.pose, zeros(3,3))
 
-function main()
+    scene, vehicle, state
+end
+
+function run_ekfsim(scene, vehicle, state)
 
     lmtags = 1:N_LANDMARKS             # Unique identifier for each landmark
 
@@ -124,10 +128,7 @@ function main()
             ellipses = compute_landmark_ellipses(state.x, state.cov)
         end
         draw_landmark_ellipses(ellipses)
-
         GR.updatews()
-
     end
 end
 
-# main()
