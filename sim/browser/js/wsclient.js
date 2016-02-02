@@ -20,10 +20,10 @@ $( function() {
     scene.selectAll( 'circle' )
         .data( data )
       .enter().append( 'circle' )
-        .attr( 'r', function() { return 0; }) // px
+        .attr( 'r', 0 ) // px
       .transition()
         .duration( 750 )
-        .attr( 'r', function() { return 5; }) // px
+        .attr( 'r', 3 ) // px
         .attr( 'cx', function( d ) { return xscale( d.x ); })
         .attr( 'cy', function( d ) { return height - yscale( d.y ); });
   }
@@ -48,15 +48,25 @@ $( function() {
         .attr( 'height', l );
   }
 
+  ws.onopen = function( event ) {
+    ws.send( JSON.stringify({
+      type: 'update',
+      text: 'ready',
+      id:   0,
+      date: Date.now()
+    }));
+
+  }
+
   // Handler for messages received from server
   // https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_client_applications
   ws.onmessage = function( event ) {
     var msg = JSON.parse( event.data );
     switch( msg.type ) {
-      case "waypoints":
+      case 'waypoints':
         drawWaypoints( msg.data );
         break;
-      case "landmarks":
+      case 'landmarks':
         drawLandmarks( msg.data );
         break;
     }
