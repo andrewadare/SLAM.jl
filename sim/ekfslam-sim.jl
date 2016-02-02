@@ -25,33 +25,27 @@ scene = Scene(BOUNDARIES,
               Array{Float64}(3, 10000),
               0)
 
+## Vehicle ##
+vehicle = Vehicle()
+vehicle.wheelbase = 4.0            # [m]
+vehicle.max_gamma = 60*pi/180      # [rad] max steering angle (-max < g < max)
+vehicle.steer_rate = 60*pi/180     # [rad/s] max rate of change in steer angle
+vehicle.pose = initial_pose(scene)
+vehicle.target_speed = 8           # [m/s]
+vehicle.waypoint_id = 1            # Initialize to index of first waypoint
+vehicle.shape = [1. -1 -1; 0 1 -1] # A little triangle for visualization
+
+## SLAM state vector ## 
+# First three elements comprise the SLAM vehicle pose; state is augmented as 
+# new landmarks are observed. Covariance matrix is also augmented during simulation.
+state = EKFSlamState(vehicle.pose, zeros(3,3))
+
 function main()
-    
-    wp = scene.waypoints               # [x,y] guidance waypoints
+
     lmtags = 1:N_LANDMARKS             # Unique identifier for each landmark
 
     d_min = 1.0                        # [m] Once inside d_min, head for next waypoint
     nlaps = 2                          # Number of loops through the waypoint list
-
-    # Initial [x, y, phi] at first waypoint, heading for second waypoint
-    initial_pose = [wp[1,1];
-                    wp[2,1];
-                    atan2(wp[2,2] - wp[2,1], wp[1,2] - wp[1,1])]
-
-    ## SLAM state vector ## 
-    # First three elements comprise the SLAM vehicle pose; state is augmented as 
-    # new landmarks are observed. Covariance matrix is also augmented during simulation.
-    state = EKFSlamState(initial_pose, zeros(3,3))
-
-    ## Vehicle ##
-    vehicle = Vehicle()
-    vehicle.wheelbase = 4.0            # [m]
-    vehicle.max_gamma = 60*pi/180      # [rad] max steering angle (-max < g < max)
-    vehicle.steer_rate = 60*pi/180     # [rad/s] max rate of change in steer angle
-    vehicle.pose = initial_pose
-    vehicle.target_speed = 8           # [m/s]
-    vehicle.waypoint_id = 1            # Initialize to index of first waypoint
-    vehicle.shape = [1. -1 -1; 0 1 -1] # A little triangle for visualization
 
     ## Control parameters and uncertainties ##
     dt = 0.025                         # [s] Interval between control updates
@@ -88,7 +82,7 @@ function main()
     while vehicle.waypoint_id != 0
 
         # Update heading and target waypoint
-        steer!(vehicle, wp, d_min, dt)
+        steer!(vehicle, scene.waypoints, d_min, dt)
 
         # If lap through waypoints is finished with more to go, start a new lap
         if vehicle.waypoint_id == 0 && nlaps > 1
@@ -126,7 +120,7 @@ function main()
         scene.true_track[:, scene.nsteps] = vehicle.pose
         scene.slam_track[:, scene.nsteps] = state.x[1:3]
 
-        draw_map(scene.landmarks, wp)
+        draw_map(scene.landmarks, scene.waypoints)
         draw_vehicle(frame_transform(vehicle.shape, vehicle.pose))
 
         if scene.nsteps > 1        
