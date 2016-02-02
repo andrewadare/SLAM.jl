@@ -6,7 +6,7 @@ module_dir = "$(pwd())/../.."
 module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)
 
 include("../ekfslam-sim.jl")
-scene, vehicle, state = ekfsim_setup()
+scene, vehicle, state = ekfsim_setup(10, "../course1.txt")
 
 """
 Create a JSON message with x,y positions from 2xN array
