@@ -2,7 +2,7 @@
 
 ## Core Types ##
 
-type Scene{T<:Real}
+immutable Scene{T<:Real}
     boundaries::Vector{T}              # Scene boundaries
     waypoints::Matrix{T}               # Waypoint positions
     landmarks::Matrix{T}               # True (simulated) feature positions
