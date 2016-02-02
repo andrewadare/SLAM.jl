@@ -36,6 +36,17 @@ end
 
 ## Shared functions ##
 
+"""
+Initial [x, y, phi] at first waypoint, heading for second waypoint
+"""
+function initial_pose(scene::Scene)
+    wp = scene.waypoints
+    [wp[1,1];
+     wp[2,1];
+     atan2(wp[2,2] - wp[2,1], wp[1,2] - wp[1,1])]
+end
+
+
 function mpi_to_pi(phi)
     if phi > pi
         return phi - 2*pi

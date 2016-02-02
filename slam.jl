@@ -11,6 +11,7 @@ export
     Vehicle,
     
     # Functions
+    initial_pose,
     mpi_to_pi,
     frame_transform,
     step_vehicle!,
