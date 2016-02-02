@@ -1,4 +1,4 @@
-VERSION >= v"0.4.0" && __precompile__(true)
+__precompile__(true)
 
 module SLAM
 
@@ -11,6 +11,7 @@ export
     Vehicle,
     
     # Functions
+    get_waypoints,
     initial_pose,
     mpi_to_pi,
     frame_transform,
