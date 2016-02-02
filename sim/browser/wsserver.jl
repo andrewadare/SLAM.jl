@@ -2,16 +2,19 @@ using HttpServer
 using WebSockets
 import JSON
 
+module_dir = "$(pwd())/../.."
+module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)
+
+include("../ekfslam-sim.jl")
+
 """
-Create a JSON message with waypoint positions
+Create a JSON message with x,y positions from 2xN array
 """
-function waypoints()
-    wp, _ = readdlm("course1.txt", header=true)
-    wp = wp'
+function xypoints_json(a::AbstractArray, msgtype::AbstractString)
 
     msg = Dict{AbstractString, Any}()
-    msg["type"] = "waypoints"
-    msg["data"] = [Dict(:x => wp[1,i], :y => wp[2,i]) for i in 1:size(wp, 2)]
+    msg["type"] = msgtype
+    msg["data"] = [Dict(:x => a[1,i], :y => a[2,i]) for i in 1:size(a, 2)]
     msg["timestamp"] = time()
 
     # Convert Dict to stringified JSON blob
@@ -31,12 +34,13 @@ wsh = WebSocketHandler() do req, client
 
         if haskey(msg, "text") && msg["text"] == "get_waypoints"
             println("Answering request: get_waypoints")
-            write(client, waypoints())
+            write(client, xypoints_json(scene.waypoints, "waypoints"))
         end
 
-        # if startswith(msg, "getnumber")
-        #     write(connections[client.id], waypoints())
-        # end
+        if haskey(msg, "text") && msg["text"] == "get_landmarks"
+            println("Answering request: get_landmarks")
+            write(client, xypoints_json(scene.landmarks, "landmarks"))
+        end
 
     end
 end
@@ -54,15 +58,6 @@ httph = HttpHandler() do req::Request, res::Response
         println("serving ", req.resource)
         return Response(readall("index.html"))
     end
-
-    # Not every request is a file, so this is not a general solution.
-    # println(req.resource, typeof(req.resource))
-    # if isfile("$req.resource")
-    #     println("hi")
-    #     println("serving /", req.resource)
-    #     return Response(open(readall, req.resource))
-    #     println("bye")
-    # end
 
     files = [
     "index.html",
