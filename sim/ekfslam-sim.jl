@@ -115,22 +115,13 @@ function main()
             state.x, state.cov = add_features(state, zn, RE)
         end
 
-        # Visualize
+        # Update vehicle tracks in scene
         scene.nsteps += 1
         scene.true_track[:, scene.nsteps] = vehicle.pose
         scene.slam_track[:, scene.nsteps] = state.x[1:3]
 
-        draw_map(scene.landmarks, scene.waypoints)
-        draw_vehicle(frame_transform(vehicle.shape, vehicle.pose))
-
-        if scene.nsteps > 1        
-            draw_true_path(scene.true_track, scene.nsteps)
-            draw_slam_path(scene.slam_track, scene.nsteps)
-            draw_vehicle_ellipse(state.x, state.cov)
-        end
-
-        draw_slam_landmarks(state.x)
-
+        # Visualize
+        draw_scene(scene, state, vehicle)
         if dtsum == 0
             draw_laser_lines(z, state.x[1:3])
             ellipses = compute_landmark_ellipses(state.x, state.cov)

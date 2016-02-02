@@ -1,5 +1,19 @@
 import GR
 
+
+function draw_scene(scene::Scene, state::EKFSlamState, vehicle::Vehicle)
+    draw_map(scene.landmarks, scene.waypoints)
+    draw_vehicle(frame_transform(vehicle.shape, vehicle.pose))
+    if scene.nsteps > 1        
+        draw_true_path(scene.true_track, scene.nsteps)
+        draw_slam_path(scene.slam_track, scene.nsteps)
+        draw_vehicle_ellipse(state.x, state.cov)
+    end
+    draw_slam_landmarks(state.x)
+    return
+end
+
+
 function init_plot_window(boundaries)
     xmin, xmax, ymin, ymax = boundaries
     GR.clearws()
