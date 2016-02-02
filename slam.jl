@@ -4,6 +4,7 @@ module SLAM
 
 export
     # Types
+    Scene,
     SlamState,
     EKFSlamState,
     PFSlamState,

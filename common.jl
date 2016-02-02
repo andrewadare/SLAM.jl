@@ -2,6 +2,15 @@
 
 ## Core Types ##
 
+type Scene{T<:Real}
+    boundaries::Vector{T}              # Scene boundaries
+    waypoints::Matrix{T}               # Waypoint positions
+    landmarks::Matrix{T}               # True (simulated) feature positions
+    true_track::Array{T}               # Ideal pose history
+    slam_track::Array{T}               # SLAM pose history
+    nsteps::Integer                    # Timestep counter
+end
+
 abstract SlamState
 
 type Particle{T<:Real}

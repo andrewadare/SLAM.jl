@@ -9,20 +9,27 @@ using SLAM
 include("sim-utils.jl")
 include("gr-draw.jl")
 
+# Scene boundaries: xmin, xmax, ymin, ymax
+const BOUNDARIES = [0.; 100; 0; 100]
+const N_LANDMARKS = 10::Int
 
-function main()
-
-    ## Scene boundaries: xmin, xmax, ymin, ymax ##
-    boundaries = [0; 100; 0; 100]
-
-    ## Landmarks ##
-    nlandmarks = 10
-    lm = make_landmarks(nlandmarks, boundaries, 0.05)
-    lmtags = 1:size(lm, 2)             # Unique identifier for each landmark
-
-    ## Waypoints ##
+function get_waypoints()
     wp, _ = readdlm("course1.txt", header=true)
     wp = wp'
+end
+
+scene = Scene(BOUNDARIES,
+              get_waypoints(),
+              make_landmarks(N_LANDMARKS, BOUNDARIES, 0.05),
+              Array{Float64}(3, 10000),
+              Array{Float64}(3, 10000),
+              0)
+
+function main()
+    
+    wp = scene.waypoints               # [x,y] guidance waypoints
+    lmtags = 1:N_LANDMARKS             # Unique identifier for each landmark
+
     d_min = 1.0                        # [m] Once inside d_min, head for next waypoint
     nlaps = 2                          # Number of loops through the waypoint list
 
@@ -68,19 +75,13 @@ function main()
 
     ## Bookkeeping variables ##
     dtsum = 0                          # Time since last observation
-    da_table = zeros(1, size(lm, 2))   # Data association table 
-    nsteps = 0                         # Timestep counter
-
-    # Ideal and SLAM pose histories for visualization.
-    # Preallocation estimate may need revision if parameters change
-    xtrue_history = Array{Float64}(3, 10000)
-    xslam_history = Array{Float64}(3, 10000)
+    da_table = zeros(1, N_LANDMARKS)   # Data association table 
     
     # GR.beginprint("racecourse.png") # Bug: outputs gks.png instead
-    init_plot_window(boundaries)
+    init_plot_window(BOUNDARIES)
     # GR.endprint()
 
-    draw_map(lm, wp)
+    draw_map(scene.landmarks, scene.waypoints)
 
     ellipses = []
 
@@ -109,7 +110,7 @@ function main()
         # EKF update step
         if dtsum > dt_obs
             dtsum = 0
-            z, tags = get_observations(vehicle.pose, lm, lmtags, sensor_range, R)
+            z, tags = get_observations(vehicle.pose, scene.landmarks, lmtags, sensor_range, R)
 
             zf, idf, zn = associate(state, z, RE, gate_rej, gate_add)
 
@@ -121,16 +122,16 @@ function main()
         end
 
         # Visualize
-        nsteps += 1
-        xtrue_history[:, nsteps] = vehicle.pose
-        xslam_history[:, nsteps] = state.x[1:3]
+        scene.nsteps += 1
+        scene.true_track[:, scene.nsteps] = vehicle.pose
+        scene.slam_track[:, scene.nsteps] = state.x[1:3]
 
-        draw_map(lm, wp)
+        draw_map(scene.landmarks, wp)
         draw_vehicle(frame_transform(vehicle.shape, vehicle.pose))
 
-        if nsteps > 1        
-            draw_true_path(xtrue_history, nsteps)
-            draw_slam_path(xslam_history, nsteps)
+        if scene.nsteps > 1        
+            draw_true_path(scene.true_track, scene.nsteps)
+            draw_slam_path(scene.slam_track, scene.nsteps)
             draw_vehicle_ellipse(state.x, state.cov)
         end
 
