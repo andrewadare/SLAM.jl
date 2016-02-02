@@ -6,6 +6,7 @@ module_dir = "$(pwd())/../.."
 module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)
 
 include("../ekfslam-sim.jl")
+scene, vehicle, state = ekfsim_setup()
 
 """
 Create a JSON message with x,y positions from 2xN array
@@ -29,8 +30,15 @@ wsh = WebSocketHandler() do req, client
     println("    client.sent_close: ", client.sent_close)
     
     while true
+
         # Read string from client, decode, and parse to Dict
         msg = JSON.parse(bytestring(read(client)))
+
+        if haskey(msg, "text") && msg["text"] == "ready"
+            println("Received update from client: ready")
+            write(client, xypoints_json(scene.waypoints, "waypoints"))
+            write(client, xypoints_json(scene.landmarks, "landmarks"))
+        end
 
         if haskey(msg, "text") && msg["text"] == "get_waypoints"
             println("Answering request: get_waypoints")
@@ -39,7 +47,6 @@ wsh = WebSocketHandler() do req, client
 
         if haskey(msg, "text") && msg["text"] == "get_landmarks"
             println("Answering request: get_landmarks")
-            write(client, xypoints_json(scene.landmarks, "landmarks"))
         end
 
     end
