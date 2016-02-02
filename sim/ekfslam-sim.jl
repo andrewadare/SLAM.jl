@@ -1,6 +1,8 @@
 # SLAM simulation using extended Kalman filter. Inspired by Matlab implementation
 # by T. Bailey et al (https://openslam.org/bailey-slam.html).
 
+# Get location of SLAM module and make sure it's in LOAD_PATH
+# module_dir = dirname(dirname(@__FILE__))
 slam_dir = "$(pwd())/.."
 slam_dir in LOAD_PATH || push!(LOAD_PATH, slam_dir)
 
@@ -13,13 +15,8 @@ include("gr-draw.jl")
 const BOUNDARIES = [0.; 100; 0; 100]
 const N_LANDMARKS = 10::Int
 
-function get_waypoints()
-    wp, _ = readdlm("course1.txt", header=true)
-    wp = wp'
-end
-
 scene = Scene(BOUNDARIES,
-              get_waypoints(),
+              get_waypoints(joinpath(slam_dir, "course1.txt")),
               make_landmarks(N_LANDMARKS, BOUNDARIES, 0.05),
               Array{Float64}(3, 10000),
               Array{Float64}(3, 10000),
@@ -133,4 +130,4 @@ function main()
     end
 end
 
-main()
+# main()
