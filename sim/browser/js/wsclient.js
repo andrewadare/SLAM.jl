@@ -4,8 +4,8 @@ $( function() {
   var ws = new WebSocket( 'ws://' + window.location.host );
 
   // Set up the scene SVG element ASAP to avoid reflowing
-  var width = 500;
-  var height = 500;
+  var width = 800;
+  var height = 800;
   var xscale = d3.scale.linear()
       .domain([ 0, 100 ])
       .range([ 0, width ]);
@@ -17,7 +17,7 @@ $( function() {
       .attr( 'height', height );
 
   function drawWaypoints( data ) {
-    var waypoints = scene.selectAll( 'circle' )
+    scene.selectAll( 'circle' )
         .data( data )
       .enter().append( 'circle' )
         .attr( 'r', function() { return 0; }) // px
@@ -25,7 +25,27 @@ $( function() {
         .duration( 750 )
         .attr( 'r', function() { return 5; }) // px
         .attr( 'cx', function( d ) { return xscale( d.x ); })
-        .attr( 'cy', function( d ) { return height - yscale( d.y ); }); 
+        .attr( 'cy', function( d ) { return height - yscale( d.y ); });
+  }
+
+  function drawLandmarks( data ) {
+
+    var l = 10; // Edge length of square
+
+    var landmarks = scene.selectAll( 'g' )
+        .data(data)
+      .enter().append( 'g' )
+        .attr( 'transform', function( d ) {
+          return 'translate(' + (xscale( d.x ) - l/2) + ',' + (height - yscale( d.y ) + l/2) + ')';
+        });
+
+    landmarks.append( 'rect' )
+        .attr( 'width', 0 )
+        .attr( 'height', 0 )
+      .transition()
+        .duration( 750 )
+        .attr( 'width', l )
+        .attr( 'height', l );
   }
 
   // Handler for messages received from server
@@ -37,61 +57,29 @@ $( function() {
         drawWaypoints( msg.data );
         break;
       case "landmarks":
+        drawLandmarks( msg.data );
         break;
     }
   }
 
   $( '#start' ).click( function() {
-    var msg = {
+  
+    // Send message object as a JSON-formatted string.
+    ws.send( JSON.stringify({
       type: 'request',
       text: 'get_waypoints',
       id:   1,
       date: Date.now()
-    };
-  
-    // Send the msg object as a JSON-formatted string.
-    ws.send(JSON.stringify(msg));
-    // ws.send( 'getnumber' );
+    }));
+
+    ws.send( JSON.stringify({
+      type: 'request',
+      text: 'get_landmarks',
+      id:   2,
+      date: Date.now()
+    }));
+
   });
 
 
 });
-
-
-  // function changeUsername( username ) {
-  //   you = username;
-  //   connection.send( 'setusername:' + username );
-  //   $( '#sayer span' ).html( username );
-  // }
-
-  // function sendMessage( message ) {
-  //   connection.send( 'say:' + message );
-  //   $( '#content' ).prepend( $( '<p class="sent"></p>' ).html( you + ': ' + message ) );
-  // }
-
-  // $( '#sayer input[type=submit]' ).click( function() {
-  //   if ( $( '#sayer input[name=say]' ).val().replace( /\s/gi, '' ).length )
-  //     sendMessage( $( '#sayer input[name=say]' ).val() );
-
-  //   $( '#sayer input[name=say]' ).val( '' ).focus();
-  // } );
-
-  // $( '#sayer input[name=say]' ).keypress( function( e ) {
-  //   if ( e.which === 13 )
-  //     $( '#sayer input[type=submit]' ).click();
-  // } );
-
-  // $( '#pick_username' ).submit( function( e ) {
-  //   var uname = $( this ).find( 'input.username' ).val();
-  //   if ( !uname.replace( /\s/gi, '' ).length )
-  //     alert( 'Please select a valid username' );
-  //   else {
-  //     changeUsername( uname );
-  //     $( '#welcome' ).hide();
-  //     $( '#chat' ).show();
-  //   }
-  //   e.stopImmediatePropagation();
-  //   e.preventDefault();
-  //   return false
-  // } );
-
