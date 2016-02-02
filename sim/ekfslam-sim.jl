@@ -1,5 +1,5 @@
-# SLAM simulation using extended Kalman filter. This is essentially a Julia port
-# of Matlab code by T. Bailey et al (https://openslam.org/bailey-slam.html).
+# SLAM simulation using extended Kalman filter. Inspired by Matlab implementation
+# by T. Bailey et al (https://openslam.org/bailey-slam.html).
 
 slam_dir = "$(pwd())/.."
 slam_dir in LOAD_PATH || push!(LOAD_PATH, slam_dir)
@@ -81,9 +81,6 @@ function main()
     # GR.endprint()
 
     draw_map(lm, wp)
-
-    # Uncomment to wait for user input (any key)    
-    # readline(STDIN)
 
     ellipses = []
 
