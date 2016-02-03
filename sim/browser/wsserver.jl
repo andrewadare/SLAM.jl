@@ -11,9 +11,24 @@ scene, vehicle, state = ekfsim_setup(10, "../course1.txt")
 function monitor(scene::Scene, vehicle::Vehicle, state::SlamState, client::WebSockets.WebSocket)
     # println(scene.nsteps)
 
-    msg = Dict{AbstractString, Any}("type" => "test", 
-                                    "data" => scene.true_track[:, scene.nsteps], 
-                                    "timestamp" => time())
+    # TODO: make a Dict to store true and slam track poses
+    # msg = Dict{AbstractString, Any}("type" => "test", 
+    #                                 "data" => scene.true_track[:, scene.nsteps], 
+    #                                 "timestamp" => time())
+    n = scene.nsteps
+    tt, st = scene.true_track, scene.slam_track
+    msg = Dict{AbstractString, Any}()
+    msg["type"] = "tracks"
+    msg["data"] = Dict("ideal" => Dict(
+                            "x"     => tt[1, n],
+                            "y"     => tt[2, n],
+                            "phi"   => tt[3, n]),
+                       "slam" => Dict(
+                            "x"     => st[1, n],
+                            "y"     => st[2, n],
+                            "phi"   => st[3, n])
+                       )
+    msg["timestamp"] = time()
     write(client, JSON.json(msg))
 end
 

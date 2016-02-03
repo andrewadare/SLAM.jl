@@ -16,15 +16,13 @@ $( function() {
       .attr( 'width', width )
       .attr( 'height', height );
 
-  // Streaming data for simulated vehicle track
+  // Streaming data for vehicle track (ideal and inferred)
   var simTrack = [];
+  var slamTrack = [];
   var simTrackSvg = scene.append( 'g' )
       .attr( 'class', 'simtrack');
-
-  // var line = d3.svg.line()
-  //     .x(function( d ) { return xscale( d.x ); })
-  //     .y(function( d ) { return yscale( d.y ); })
-  //     .interpolate( 'linear' );
+  var slamTrackSvg = scene.append( 'g' )
+      .attr( 'class', 'slamtrack');
 
   function drawWaypoints( data ) {
     scene.selectAll( 'circle' )
@@ -34,7 +32,7 @@ $( function() {
       .attr( 'r', 0 ) // px
       .transition()
       .duration( 750 )
-      .attr( 'r', 3 ) // px
+      .attr( 'r', 4 ) // px
       .attr( 'cx', function( d ) { return xscale( d.x ); })
       .attr( 'cy', function( d ) { return yscale( d.y ); })
       .attr( 'class', 'waypoints' );
@@ -67,17 +65,34 @@ $( function() {
 
   function drawSimTrack( data ) {
 
-    simTrack.push( { 'x': +data[0], 'y': +data[1] });
+    simTrack.push( {
+      'x': xscale( data.ideal.x ),
+      'y': yscale( data.ideal.y )
+    });
+
+    slamTrack.push( {
+      'x': xscale( data.slam.x ),
+      'y': yscale( data.slam.y )
+    });
+
     var n = simTrack.length;
 
     if ( n > 1 ) {
       simTrackSvg
         .append( 'line' )
-        .attr( 'x1', xscale( simTrack[ n - 2 ].x ))
-        .attr( 'y1', yscale( simTrack[ n - 2 ].y ))
-        .attr( 'x2', xscale( simTrack[ n - 1 ].x ))
-        .attr( 'y2', yscale( simTrack[ n - 1 ].y ));
+        .attr( 'x1', simTrack[ n - 2 ].x )
+        .attr( 'y1', simTrack[ n - 2 ].y )
+        .attr( 'x2', simTrack[ n - 1 ].x )
+        .attr( 'y2', simTrack[ n - 1 ].y );
+      
+      slamTrackSvg
+        .append( 'line' )
+        .attr( 'x1', slamTrack[ n - 2 ].x )
+        .attr( 'y1', slamTrack[ n - 2 ].y )
+        .attr( 'x2', slamTrack[ n - 1 ].x )
+        .attr( 'y2', slamTrack[ n - 1 ].y );
     }
+
   }
 
   ws.onopen = function( event ) {
@@ -101,7 +116,7 @@ $( function() {
       case 'landmarks':
         drawLandmarks( msg.data );
         break;
-      case 'test':
+      case 'tracks':
         drawSimTrack( msg.data );
         break;
     }
