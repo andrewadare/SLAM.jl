@@ -35,13 +35,13 @@ function ekfsim_setup(n_landmarks::Integer, waypoints_file::AbstractString)
     scene, vehicle, state
 end
 
-# Call this version if there is no need to monitor the simulation state at runtime
+# Call this method if there is no need to monitor the simulation state at runtime
 function sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState)
-    sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState, (x...) -> ())
+    sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState, (x...) -> (), [])
 end
 
 
-function sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState, monitor::Function)
+function sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState, monitor::Function, args::AbstractVector)
     n_landmarks = size(scene.landmarks, 2)
 
     lmtags = 1:n_landmarks             # Unique identifier for each landmark
@@ -118,7 +118,7 @@ function sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState, monitor::Funct
         scene.true_track[:, scene.nsteps] = vehicle.pose
         scene.slam_track[:, scene.nsteps] = state.x[1:3]
 
-        monitor(scene, vehicle, state)
+        monitor(args...)
 
         # Visualize
         draw_scene(scene, state, vehicle)
