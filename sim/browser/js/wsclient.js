@@ -15,25 +15,29 @@ $( function() {
   var scene = d3.select( '.scene' )
       .attr( 'width', width )
       .attr( 'height', height );
-  var simTrack = scene.append( 'g' )
-      .attr( 'class', 'simtrack' );
 
-  var line = d3.svg.line()
-      .x(function( d ) { return xscale( d[ 0 ] ); })
-      .y(function( d ) { return yscale( d[ 1 ] ); })
-      .interpolate( 'linear' );
+  // Streaming data for simulated vehicle track
+  var simTrack = [];
+  var simTrackSvg = scene.append( 'g' )
+      .attr( 'class', 'simtrack');
+
+  // var line = d3.svg.line()
+  //     .x(function( d ) { return xscale( d.x ); })
+  //     .y(function( d ) { return yscale( d.y ); })
+  //     .interpolate( 'linear' );
 
   function drawWaypoints( data ) {
     scene.selectAll( 'circle' )
-        .data( data )
-      .enter().append( 'circle' )
-        .attr( 'r', 0 ) // px
+      .data( data )
+      .enter()
+      .append( 'circle' )
+      .attr( 'r', 0 ) // px
       .transition()
-        .duration( 750 )
-        .attr( 'r', 3 ) // px
-        .attr( 'cx', function( d ) { return xscale( d.x ); })
-        .attr( 'cy', function( d ) { return yscale( d.y ); })
-        .attr( 'class', 'waypoints' );
+      .duration( 750 )
+      .attr( 'r', 3 ) // px
+      .attr( 'cx', function( d ) { return xscale( d.x ); })
+      .attr( 'cy', function( d ) { return yscale( d.y ); })
+      .attr( 'class', 'waypoints' );
   }
 
   function drawLandmarks( data ) {
@@ -41,29 +45,39 @@ $( function() {
     var l = 10; // Edge length of square
 
     var landmarks = scene.selectAll( 'g' )
-        .data(data)
-      .enter().append( 'g' )
-        .attr( 'transform', function( d ) {
-          return 'translate(' + (xscale( d.x ) - l/2) + ',' + (yscale( d.y ) - l/2) + ')';
-        });
+      .data(data)
+      .enter()
+      .append( 'g' )
+      .attr( 'transform', function( d ) {
+        return 'translate(' + (xscale( d.x ) - l/2) + ',' + (yscale( d.y ) - l/2) + ')';
+      });
 
     landmarks.append( 'rect' )
-        .attr( 'width', 0 )
-        .attr( 'height', 0 )
+      .attr( 'width', 0 )
+      .attr( 'height', 0 )
       .transition()
-        .duration( 750 )
-        .attr( 'width', l )
-        .attr( 'height', l )
-        .attr( 'rx', l/5)
-        .attr( 'ry', l/5)
-        .attr( 'class', 'landmarks' );
+      .duration( 750 )
+      .attr( 'width', l )
+      .attr( 'height', l )
+      .attr( 'rx', l/5)
+      .attr( 'ry', l/5)
+      .attr( 'class', 'landmarks' );
   }
 
-  // TODO pick up here
+
   function drawSimTrack( data ) {
-    simTrack.append( 'path' )
-        .data( data )
-      .enter().append( 'path' )
+
+    simTrack.push( { 'x': +data[0], 'y': +data[1] });
+    var n = simTrack.length;
+
+    if ( n > 1 ) {
+      simTrackSvg
+        .append( 'line' )
+        .attr( 'x1', xscale( simTrack[ n - 2 ].x ))
+        .attr( 'y1', yscale( simTrack[ n - 2 ].y ))
+        .attr( 'x2', xscale( simTrack[ n - 1 ].x ))
+        .attr( 'y2', yscale( simTrack[ n - 1 ].y ));
+    }
   }
 
   ws.onopen = function( event ) {
@@ -88,7 +102,7 @@ $( function() {
         drawLandmarks( msg.data );
         break;
       case 'test':
-        console.log( msg.data );
+        drawSimTrack( msg.data );
         break;
     }
   }
