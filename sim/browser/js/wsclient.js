@@ -15,6 +15,13 @@ $( function() {
   var scene = d3.select( '.scene' )
       .attr( 'width', width )
       .attr( 'height', height );
+  var simTrack = scene.append( 'g' )
+      .attr( 'class', 'simtrack' );
+
+  var line = d3.svg.line()
+      .x(function( d ) { return xscale( d[ 0 ] ); })
+      .y(function( d ) { return yscale( d[ 1 ] ); })
+      .interpolate( 'linear' );
 
   function drawWaypoints( data ) {
     scene.selectAll( 'circle' )
@@ -25,7 +32,8 @@ $( function() {
         .duration( 750 )
         .attr( 'r', 3 ) // px
         .attr( 'cx', function( d ) { return xscale( d.x ); })
-        .attr( 'cy', function( d ) { return height - yscale( d.y ); });
+        .attr( 'cy', function( d ) { return yscale( d.y ); })
+        .attr( 'class', 'waypoints' );
   }
 
   function drawLandmarks( data ) {
@@ -36,7 +44,7 @@ $( function() {
         .data(data)
       .enter().append( 'g' )
         .attr( 'transform', function( d ) {
-          return 'translate(' + (xscale( d.x ) - l/2) + ',' + (height - yscale( d.y ) + l/2) + ')';
+          return 'translate(' + (xscale( d.x ) - l/2) + ',' + (yscale( d.y ) - l/2) + ')';
         });
 
     landmarks.append( 'rect' )
@@ -45,7 +53,17 @@ $( function() {
       .transition()
         .duration( 750 )
         .attr( 'width', l )
-        .attr( 'height', l );
+        .attr( 'height', l )
+        .attr( 'rx', l/5)
+        .attr( 'ry', l/5)
+        .attr( 'class', 'landmarks' );
+  }
+
+  // TODO pick up here
+  function drawSimTrack( data ) {
+    simTrack.append( 'path' )
+        .data( data )
+      .enter().append( 'path' )
   }
 
   ws.onopen = function( event ) {
@@ -84,13 +102,6 @@ $( function() {
       id:   1,
       date: Date.now()
     }));
-
-    // ws.send( JSON.stringify( {
-    //   type: 'request',
-    //   text: 'get_landmarks',
-    //   id:   2,
-    //   date: Date.now()
-    // }));
 
   });
 
