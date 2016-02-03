@@ -12,7 +12,7 @@ function monitor(scene::Scene, vehicle::Vehicle, state::SlamState, client::WebSo
     # println(scene.nsteps)
 
     msg = Dict{AbstractString, Any}("type" => "test", 
-                                    "data" => scene.nsteps, 
+                                    "data" => scene.true_track[:, scene.nsteps], 
                                     "timestamp" => time())
     write(client, JSON.json(msg))
 end
@@ -53,10 +53,6 @@ wsh = WebSocketHandler() do req, client
         if haskey(msg, "text") && msg["text"] == "start"
             println("Answering request: start")
             sim(scene, vehicle, state, monitor, [scene, vehicle, state, client])
-        end
-
-        if haskey(msg, "text") && msg["text"] == "get_landmarks"
-            println("Answering request: get_landmarks")
         end
 
     end
