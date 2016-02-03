@@ -8,6 +8,16 @@ module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)
 include("../ekfslam-sim.jl")
 scene, vehicle, state = ekfsim_setup(10, "../course1.txt")
 
+function monitor(scene::Scene, vehicle::Vehicle, state::SlamState, client::WebSockets.WebSocket)
+    # println(scene.nsteps)
+
+    msg = Dict{AbstractString, Any}("type" => "test", 
+                                    "data" => scene.nsteps, 
+                                    "timestamp" => time())
+    write(client, JSON.json(msg))
+end
+
+
 """
 Create a JSON message with x,y positions from 2xN array
 """
@@ -40,9 +50,9 @@ wsh = WebSocketHandler() do req, client
             write(client, xypoints_json(scene.landmarks, "landmarks"))
         end
 
-        if haskey(msg, "text") && msg["text"] == "get_waypoints"
-            println("Answering request: get_waypoints")
-            write(client, xypoints_json(scene.waypoints, "waypoints"))
+        if haskey(msg, "text") && msg["text"] == "start"
+            println("Answering request: start")
+            sim(scene, vehicle, state, monitor, [scene, vehicle, state, client])
         end
 
         if haskey(msg, "text") && msg["text"] == "get_landmarks"

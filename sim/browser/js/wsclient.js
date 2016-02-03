@@ -49,7 +49,7 @@ $( function() {
   }
 
   ws.onopen = function( event ) {
-    ws.send( JSON.stringify({
+    ws.send( JSON.stringify( {
       type: 'update',
       text: 'ready',
       id:   0,
@@ -69,25 +69,28 @@ $( function() {
       case 'landmarks':
         drawLandmarks( msg.data );
         break;
+      case 'test':
+        console.log( msg.data );
+        break;
     }
   }
 
   $( '#start' ).click( function() {
   
     // Send message object as a JSON-formatted string.
-    ws.send( JSON.stringify({
+    ws.send( JSON.stringify( {
       type: 'request',
-      text: 'get_waypoints',
+      text: 'start',
       id:   1,
       date: Date.now()
     }));
 
-    ws.send( JSON.stringify({
-      type: 'request',
-      text: 'get_landmarks',
-      id:   2,
-      date: Date.now()
-    }));
+    // ws.send( JSON.stringify( {
+    //   type: 'request',
+    //   text: 'get_landmarks',
+    //   id:   2,
+    //   date: Date.now()
+    // }));
 
   });
 
