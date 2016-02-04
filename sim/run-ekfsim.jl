@@ -4,9 +4,12 @@ module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)
 
 include("ekfslam-sim.jl")
 
-function monitor(scene::Scene, vehicle::Vehicle, state::SlamState)
-    println(scene.nsteps)
+function monitor(simdata::SimData)
+    println(simdata.scene.nsteps)
 end
 
-scene, vehicle, state = ekfsim_setup(10, "course1.txt")
-sim(scene, vehicle, state, monitor, [scene, vehicle, state])
+# Global object containing simulation state, updated in real time. 
+# It is exposed for monitoring, debugging, and flexible visualization.
+simdata = ekfsim_setup(10, "course1.txt")
+
+sim!(simdata, monitor, [simdata])

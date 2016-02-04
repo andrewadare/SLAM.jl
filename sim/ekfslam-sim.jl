@@ -6,6 +6,7 @@ using SLAM
 include("sim-utils.jl")
 include("gr-draw.jl")
 
+
 function ekfsim_setup(n_landmarks::Integer, waypoints_file::AbstractString)
 
     # Scene boundaries: xmin, xmax, ymin, ymax
@@ -30,39 +31,45 @@ function ekfsim_setup(n_landmarks::Integer, waypoints_file::AbstractString)
     # SLAM state vector
     # First three elements comprise the SLAM vehicle pose; state is augmented as
     # new landmarks are observed. Covariance matrix is also augmented during simulation.
-    state = EKFSlamState(vehicle.pose, zeros(3, 3), zeros(2, n_landmarks), 0)
+    state = EKFSlamState(vehicle.pose, zeros(3, 3))
 
-    scene, vehicle, state
-end
-
-# Call this method if there is no need to monitor the simulation state at runtime
-function sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState)
-    sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState, (x...) -> (), [])
+    SimData(scene, vehicle, state, zeros(2, n_landmarks), 0)
 end
 
 
-function sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState, monitor::Function, args::AbstractVector)
+# This method runs the simulation without monitoring
+function sim!(simdata::SimData)
+    sim!(simdata::SimData, (x...) -> (), [])
+end
+
+
+function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
+    
+    # Use "typedefs" for simdata fields to shorten names.
+    # Since these are references, the simdata object is modified in place.
+    scene, vehicle, state = simdata.scene, simdata.vehicle, simdata.state
+    z, nz = simdata.z, simdata.nz
+
     n_landmarks = size(scene.landmarks, 2)
 
     lmtags = 1:n_landmarks             # Unique identifier for each landmark
-
     d_min = 1.0                        # [m] Once inside d_min, head for next waypoint
     nlaps = 2                          # Number of loops through the waypoint list
 
-    ## Control parameters and uncertainties ##
+    # Control parameters and uncertainties
     dt = 0.025                         # [s] Interval between control updates
     sigma_speed = 0.5                  # [m/s] Uncertainty about target speed
     sigma_steer = (3.0*pi/180)         # [rad] Uncertainty about target gamma
     Q = [sigma_speed^2 0; 0 sigma_steer^2]
 
-    ## Observation parameters ##
+    # Observation parameters
     sensor_range = 30                  # [m] Landmark detection radius
     dt_obs = 8*dt                      # [s] Observation timestep
     sigmaR = 0.1                       # [m] Range uncertainty
     sigmaB = (1.0*pi/180)              # [rad] Bearing angle uncertainty
     R = [sigmaR^2 0; 0 sigmaB^2]       # Obs. covariance matrix
 
-    ## Bookkeeping variables ##
+    # Bookkeeping variables
     dtsum = 0                          # Time since last observation
     da_table = zeros(1, n_landmarks)   # Data association table 
     
@@ -100,8 +107,7 @@ function sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState, monitor::Funct
         if dtsum > dt_obs
             dtsum = 0
             z, tags = get_observations(vehicle.pose, scene.landmarks, lmtags, sensor_range, R)
-            state.nz = size(z, 2)
-            state.z[:,1:state.nz] = z
+            nz = size(z, 2)
 
             # Last two parameters are thresholds (Mahalanobis distances)
             # 4.0  [m] max distance for association

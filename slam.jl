@@ -9,6 +9,7 @@ export
     EKFSlamState,
     PFSlamState,
     Vehicle,
+    SimData,
     
     # Functions
     get_waypoints,
@@ -26,7 +27,6 @@ export
 
 
 include("common.jl")
-include("vehicle.jl")
 include("ekf.jl")
 include("data-association.jl")
 

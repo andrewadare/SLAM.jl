@@ -6,34 +6,37 @@ module_dir = "$(pwd())/../.."
 module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)
 
 include("../ekfslam-sim.jl")
-scene, vehicle, state = ekfsim_setup(10, "../course1.txt")
 
-function monitor(scene::Scene, vehicle::Vehicle, state::SlamState, client::WebSockets.WebSocket)
+# Global object containing simulation state, updated in real time. 
+# It is exposed for monitoring, debugging, and flexible visualization.
+simdata = ekfsim_setup(10, "../course1.txt")
 
-    n = scene.nsteps
-    tt, st = scene.true_track, scene.slam_track
+function monitor(simdata::SimData, client::WebSockets.WebSocket)
+
+    n = simdata.scene.nsteps
+    tt, st = simdata.scene.true_track, simdata.scene.slam_track
     msg = Dict{AbstractString, Any}()
 
     # Write track data
     msg["type"] = "tracks"
     msg["data"] = Dict("ideal" => Dict(
-                            "x"     => tt[1, n],
-                            "y"     => tt[2, n],
-                            "phi"   => tt[3, n]),
+                            "x"   => tt[1, n],
+                            "y"   => tt[2, n],
+                            "phi" => tt[3, n]),
                        "slam" => Dict(
-                            "x"     => st[1, n],
-                            "y"     => st[2, n],
-                            "phi"   => st[3, n])
+                            "x"   => st[1, n],
+                            "y"   => st[2, n],
+                            "phi" => st[3, n])
                        )
     msg["timestamp"] = time()
     write(client, JSON.json(msg))
 
     # Write EKF SLAM state data (reassigning all msg keys)
     msg["type"] = "state"
-    msg["data"] = Dict("pose" => state.x[1:3],
-                       "cov"  => state.cov,
-                       "z"    => state.z,
-                       "nobs" => state.nz)
+    msg["data"] = Dict("pose" => simdata.state.x[1:3],
+                       "cov"  => simdata.state.cov,
+                       "z"    => simdata.z,
+                       "nobs" => simdata.nz)
     msg["timestamp"] = time()
     write(client, JSON.json(msg))
     return
@@ -68,13 +71,14 @@ wsh = WebSocketHandler() do req, client
 
         if haskey(msg, "text") && msg["text"] == "ready"
             println("Received update from client: ready")
-            write(client, xypoints_json(scene.waypoints, "waypoints"))
-            write(client, xypoints_json(scene.landmarks, "landmarks"))
+            write(client, xypoints_json(simdata.scene.waypoints, "waypoints"))
+            write(client, xypoints_json(simdata.scene.landmarks, "landmarks"))
         end
 
         if haskey(msg, "text") && msg["text"] == "start"
             println("Answering request: start")
-            sim(scene, vehicle, state, monitor, [scene, vehicle, state, client])
+            # TODO re-initialize so sim can be re-run by reloading page
+            sim!(simdata, monitor, [simdata, client])
         end
 
     end
