@@ -11,6 +11,17 @@ include("../ekfslam-sim.jl")
 # It is exposed for monitoring, debugging, and flexible visualization.
 simdata = ekfsim_setup(10, "../course1.txt")
 
+"""
+Create array of Dicts from key strings and first two rows of array.
+"""
+function pair_array(a::Matrix, key1::AbstractString, key2::AbstractString)
+    [Dict(key1 => a[1,i], key2 => a[2,i]) for i in 1:size(a, 2)]
+end
+
+"""
+Write JSON-formatted message to websocket client.
+Recipients expect the schema defined here, so modify with care.
+"""
 function send_json(name::AbstractString, data::Any, client::WebSockets.WebSocket)
     msg = Dict{AbstractString, Any}()
     msg["type"] = name
@@ -37,32 +48,13 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
     d = Dict("pose" => simdata.state.x[1:3], "cov" => simdata.state.cov)
     send_json("state", d, client)
 
-    # Send observations, but only when just recorded
+    # Send observations
     if simdata.state_updated && simdata.nz > 0
-        nz = simdata.nz
-        z = simdata.z[:, 1:nz]
-        d = Dict("range" => vec(z[1,:]),
-                 "bearing" => vec(z[2,:]),
-                 "n_observations" => nz)
-        send_json("observations", d, client)
+        z = simdata.z[:, 1:simdata.nz]
+        send_json("observations", pair_array(z, "range", "bearing"), client)
     end
 
     return
-end
-
-
-"""
-Create a JSON message with x,y positions from 2xN array
-"""
-function xypoints_json(a::AbstractArray, msgtype::AbstractString)
-
-    msg = Dict{AbstractString, Any}()
-    msg["type"] = msgtype
-    msg["data"] = [Dict(:x => a[1,i], :y => a[2,i]) for i in 1:size(a, 2)]
-    msg["timestamp"] = time()
-
-    # Convert Dict to stringified JSON blob
-    JSON.json(msg)
 end
 
 wsh = WebSocketHandler() do req, client
@@ -79,8 +71,8 @@ wsh = WebSocketHandler() do req, client
 
         if haskey(msg, "text") && msg["text"] == "ready"
             println("Received update from client: ready")
-            write(client, xypoints_json(simdata.scene.waypoints, "waypoints"))
-            write(client, xypoints_json(simdata.scene.landmarks, "landmarks"))
+            send_json("waypoints", pair_array(simdata.scene.waypoints, "x", "y"), client)
+            send_json("landmarks", pair_array(simdata.scene.landmarks, "x", "y"), client)
         end
 
         if haskey(msg, "text") && msg["text"] == "start"
