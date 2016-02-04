@@ -23,23 +23,8 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
 
     n = simdata.scene.nsteps
     tt, st = simdata.scene.true_track, simdata.scene.slam_track
-    # msg = Dict{AbstractString, Any}()
 
-    # # Write track data
-    # msg["type"] = "tracks"
-    # msg["data"] = Dict("ideal" => Dict(
-    #                         "x"   => tt[1, n],
-    #                         "y"   => tt[2, n],
-    #                         "phi" => tt[3, n]),
-    #                    "slam" => Dict(
-    #                         "x"   => st[1, n],
-    #                         "y"   => st[2, n],
-    #                         "phi" => st[3, n])
-    #                    )
-    # msg["timestamp"] = time()
-    # write(client, JSON.json(msg))
-
-    # Send latest track history
+    # Send latest pose information
     d = Dict("ideal" => Dict("x"   => tt[1, n],
                              "y"   => tt[2, n],
                              "phi" => tt[3, n]),
@@ -52,31 +37,11 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
     d = Dict("pose" => simdata.state.x[1:3], "cov" => simdata.state.cov)
     send_json("state", d, client)
 
-    # Send observations
+    # Send observations, but only when just recorded
     if simdata.state_updated
         d = Dict("z" => simdata.z, "nobs" => simdata.nz)
         send_json("observations", d, client)
     end
-
-    # # Write EKF SLAM state data (reassigning all msg keys)
-    # msg["type"] = "state"
-    # msg["data"] = Dict("pose" => simdata.state.x[1:3],
-    #                    "cov"  => simdata.state.cov,
-    #                    "z"    => simdata.z,
-    #                    "nobs" => simdata.nz)
-    # msg["timestamp"] = time()
-    # write(client, JSON.json(msg))
-
-    # # Write observation data (reassigning all msg keys)
-    # msg["type"] = "state"
-    # msg["data"] = Dict("pose" => simdata.state.x[1:3],
-    #                    "cov"  => simdata.state.cov,
-    #                    "z"    => simdata.z,
-    #                    "nobs" => simdata.nz)
-    # msg["timestamp"] = time()
-    # write(client, JSON.json(msg))
-
-
 
     return
 end
