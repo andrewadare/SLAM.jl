@@ -57,8 +57,8 @@ $( function() {
       .duration( 750 )
       .attr( 'width', l )
       .attr( 'height', l )
-      .attr( 'rx', l/5)
-      .attr( 'ry', l/5)
+      .attr( 'rx', l/8)
+      .attr( 'ry', l/8)
       .attr( 'class', 'landmarks' );
   }
 
@@ -92,8 +92,12 @@ $( function() {
         .attr( 'x2', slamTrack[ n - 1 ].x )
         .attr( 'y2', slamTrack[ n - 1 ].y );
     }
-
   }
+
+  function drawLidar( data ) {
+    // TODO
+  }
+
 
   ws.onopen = function( event ) {
     ws.send( JSON.stringify( {
@@ -118,6 +122,9 @@ $( function() {
         break;
       case 'tracks':
         drawSimTrack( msg.data );
+        break;
+      case 'state':
+        drawLidar( msg.data );
         break;
     }
   }
