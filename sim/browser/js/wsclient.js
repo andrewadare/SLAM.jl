@@ -23,6 +23,9 @@ $( function() {
       .attr( 'class', 'simtrack');
   var slamTrackSvg = scene.append( 'g' )
       .attr( 'class', 'slamtrack');
+  var lidarLines = scene.append( 'g' )
+      .attr( 'class', 'lidar-lines' );
+
 
   function drawWaypoints( data ) {
     scene.selectAll( 'circle' )
@@ -43,7 +46,7 @@ $( function() {
     var l = 10; // Edge length of square
 
     var landmarks = scene.selectAll( 'g' )
-      .data(data)
+      .data( data )
       .enter()
       .append( 'g' )
       .attr( 'transform', function( d ) {
@@ -95,9 +98,23 @@ $( function() {
   }
 
   function drawLidar( data ) {
-    console.log('nz', data.n_observations );
-    console.log('    r', data.range );
-    console.log('    b', data.bearing );
+    // console.log( data );
+    // console.log('nz', data.n_observations );
+    // console.log('    r', data.range );
+    // console.log('    b', data.bearing );
+
+    var n = simTrack.length;
+
+    // TODO pick up here
+    scene.selectAll( '.lidar-lines' )
+        // .remove()
+        .data( data )
+        // .enter()
+        .append( 'line' )
+        .attr( 'x1', simTrack[ n - 1 ].x )
+        .attr( 'y1', simTrack[ n - 1 ].y )
+        .attr( 'x2', function( d ) { return simTrack[ n - 1 ].x + d.range; } )
+        .attr( 'y2', function( d ) { return simTrack[ n - 1 ].y + d.range; } );
   }
 
   ws.onopen = function( event ) {
@@ -107,7 +124,6 @@ $( function() {
       id:   0,
       date: Date.now()
     }));
-
   }
 
   // Handler for messages received from server
@@ -134,7 +150,6 @@ $( function() {
   }
 
   $( '#start' ).click( function() {
-
     // Send message object as a JSON-formatted string.
     ws.send( JSON.stringify( {
       type: 'request',
@@ -142,7 +157,6 @@ $( function() {
       id:   1,
       date: Date.now()
     }));
-
   });
 
 
