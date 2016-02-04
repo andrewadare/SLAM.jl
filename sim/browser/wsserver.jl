@@ -9,15 +9,12 @@ include("../ekfslam-sim.jl")
 scene, vehicle, state = ekfsim_setup(10, "../course1.txt")
 
 function monitor(scene::Scene, vehicle::Vehicle, state::SlamState, client::WebSockets.WebSocket)
-    # println(scene.nsteps)
 
-    # TODO: make a Dict to store true and slam track poses
-    # msg = Dict{AbstractString, Any}("type" => "test", 
-    #                                 "data" => scene.true_track[:, scene.nsteps], 
-    #                                 "timestamp" => time())
     n = scene.nsteps
     tt, st = scene.true_track, scene.slam_track
     msg = Dict{AbstractString, Any}()
+
+    # Write track data
     msg["type"] = "tracks"
     msg["data"] = Dict("ideal" => Dict(
                             "x"     => tt[1, n],
@@ -30,6 +27,16 @@ function monitor(scene::Scene, vehicle::Vehicle, state::SlamState, client::WebSo
                        )
     msg["timestamp"] = time()
     write(client, JSON.json(msg))
+
+    # Write EKF SLAM state data (reassigning all msg keys)
+    msg["type"] = "state"
+    msg["data"] = Dict("pose" => state.x[1:3],
+                       "cov"  => state.cov,
+                       "z"    => state.z,
+                       "nobs" => state.nz)
+    msg["timestamp"] = time()
+    write(client, JSON.json(msg))
+    return
 end
 
 
