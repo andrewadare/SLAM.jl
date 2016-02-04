@@ -61,6 +61,7 @@ type SimData{T<:Real}
     state::SlamState
     z::Matrix{T}             # Recent [range, bearing] feature observations
     nz::Int                  # Current number of observations
+    state_updated::Bool      # If SLAM state occured in this step
 end
 
 ## Functions ##

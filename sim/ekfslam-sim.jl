@@ -33,7 +33,7 @@ function ekfsim_setup(n_landmarks::Integer, waypoints_file::AbstractString)
     # new landmarks are observed. Covariance matrix is also augmented during simulation.
     state = EKFSlamState(vehicle.pose, zeros(3, 3))
 
-    SimData(scene, vehicle, state, zeros(2, n_landmarks), 0)
+    SimData(scene, vehicle, state, zeros(2, n_landmarks), 0, false)
 end
 
 
@@ -64,7 +64,7 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
 
     # Observation parameters
     sensor_range = 30                  # [m] Landmark detection radius
-    dt_obs = 8*dt                      # [s] Observation timestep
+    dt_obs = 8*dt                      # [s] Interval between data-driven state updates
     sigmaR = 0.1                       # [m] Range uncertainty
     sigmaB = (1.0*pi/180)              # [rad] Bearing angle uncertainty
     R = [sigmaR^2 0; 0 sigmaB^2]       # Obs. covariance matrix
@@ -103,9 +103,10 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
 
         dtsum += dt
 
-        # EKF update step
+        # EKF update step - takes place every (dt_obs/dt) timesteps
         if dtsum > dt_obs
             dtsum = 0
+            simdata.state_updated = true
             z, tags = get_observations(vehicle.pose, scene.landmarks, lmtags, sensor_range, R)
             nz = size(z, 2)
 
@@ -119,6 +120,8 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
 
             # Add z measurements to the SLAM state vector and its covariance
             state.x, state.cov = add_features(state, zn, R)
+        else
+            simdata.state_updated = false
         end
 
         # Update vehicle tracks in scene
@@ -130,7 +133,7 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
 
         # Visualize
         draw_scene(scene, state, vehicle)
-        if dtsum == 0
+        if simdata.state_updated
             draw_laser_lines(z, state.x[1:3])
             ellipses = compute_landmark_ellipses(state.x, state.cov)
         end
