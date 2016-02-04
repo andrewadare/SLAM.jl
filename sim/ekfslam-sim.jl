@@ -44,11 +44,10 @@ end
 
 
 function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
-    
+
     # Use "typedefs" for simdata fields to shorten names.
     # Since these are references, the simdata object is modified in place.
     scene, vehicle, state = simdata.scene, simdata.vehicle, simdata.state
-    z, nz = simdata.z, simdata.nz
 
     n_landmarks = size(scene.landmarks, 2)
 
@@ -71,8 +70,8 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
 
     # Bookkeeping variables
     dtsum = 0                          # Time since last observation
-    da_table = zeros(1, n_landmarks)   # Data association table 
-    
+    da_table = zeros(1, n_landmarks)   # Data association table
+
     # GR.beginprint("racecourse.png") # Bug: outputs gks.png instead
     init_plot_window(scene.boundaries)
     # GR.endprint()
@@ -88,8 +87,8 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
 
         # If lap through waypoints is finished with more to go, start a new lap
         if vehicle.waypoint_id == 0 && nlaps > 1
-            vehicle.waypoint_id = 1 
-            nlaps -= 1 
+            vehicle.waypoint_id = 1
+            nlaps -= 1
         end
 
         # Advance vehicle's equations of motion by one timestep
@@ -97,7 +96,7 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
 
         # Simulate imprecision about control target speed and steering angle
         add_control_noise!(vehicle, Q)
-       
+
         # Prediction update for state vector and covariance
         state.x, state.cov = predict(state, vehicle, Q, dt)
 
@@ -107,13 +106,13 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
         if dtsum > dt_obs
             dtsum = 0
             simdata.state_updated = true
-            z, tags = get_observations(vehicle.pose, scene.landmarks, lmtags, sensor_range, R)
-            nz = size(z, 2)
+            simdata.z, tags = get_observations(vehicle.pose, scene.landmarks, lmtags, sensor_range, R)
+            simdata.nz = size(simdata.z, 2)
 
             # Last two parameters are thresholds (Mahalanobis distances)
             # 4.0  [m] max distance for association
             # 25.0 [m] min distance for creation of new feature
-            zf, idf, zn = associate(state, z, R, 4.0, 25.0)
+            zf, idf, zn = associate(state, simdata.z, R, 4.0, 25.0)
 
             # Update SLAM state
             state.x, state.cov = update(state, zf, R, idf)
@@ -134,7 +133,7 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
         # Visualize
         draw_scene(scene, state, vehicle)
         if simdata.state_updated
-            draw_laser_lines(z, state.x[1:3])
+            draw_laser_lines(simdata.z, state.x[1:3])
             ellipses = compute_landmark_ellipses(state.x, state.cov)
         end
         draw_landmark_ellipses(ellipses)
