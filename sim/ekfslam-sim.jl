@@ -30,7 +30,7 @@ function ekfsim_setup(n_landmarks::Integer, waypoints_file::AbstractString)
     # SLAM state vector
     # First three elements comprise the SLAM vehicle pose; state is augmented as
     # new landmarks are observed. Covariance matrix is also augmented during simulation.
-    state = EKFSlamState(vehicle.pose, zeros(3,3))
+    state = EKFSlamState(vehicle.pose, zeros(3, 3), zeros(2, n_landmarks), 0)
 
     scene, vehicle, state
 end
@@ -100,6 +100,8 @@ function sim(scene::Scene, vehicle::Vehicle, state::EKFSlamState, monitor::Funct
         if dtsum > dt_obs
             dtsum = 0
             z, tags = get_observations(vehicle.pose, scene.landmarks, lmtags, sensor_range, R)
+            state.nz = size(z, 2)
+            state.z[:,1:state.nz] = z
 
             # Last two parameters are thresholds (Mahalanobis distances)
             # 4.0  [m] max distance for association
