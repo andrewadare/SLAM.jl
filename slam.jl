@@ -10,7 +10,7 @@ export
     PFSlamState,
     Vehicle,
     SimData,
-    
+
     # Functions
     get_waypoints,
     initial_pose,

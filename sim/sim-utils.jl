@@ -1,4 +1,4 @@
-function make_landmarks(nlandmarks::Int, boundaries, margin) 
+function make_landmarks(nlandmarks::Int, boundaries, margin)
     xmin, xmax, ymin, ymax = boundaries
     bx = margin*(xmax - xmin)
     by = margin*(ymax - ymin)
@@ -47,17 +47,17 @@ end
 function add_observation_noise(z, R)
     # Add Gaussian noise to observation vector z
     ncols = size(z, 2)
-    [z[1,:] + randn(1, ncols)*sqrt(R[1,1]) 
+    [z[1,:] + randn(1, ncols)*sqrt(R[1,1])
      z[2,:] + randn(1, ncols)*sqrt(R[2,2])]
 end
 
 
 function get_observations(pose, lm, landmark_tags, rmax, R)
-    # Return array with columns z = [range; angle] for all nearby landmark 
+    # Return array with columns z = [range; angle] for all nearby landmark
     # observations as well as the corresponding list of landmark IDs.
 
     inearby = nearby_landmark_indices(pose, lm, rmax)
-    
+
     dx  = lm[1,inearby] - pose[1]
     dy  = lm[2,inearby] - pose[2]
     phi = pose[3]

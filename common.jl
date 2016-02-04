@@ -103,7 +103,7 @@ end
 function frame_transform(p, b)
 
     q = zeros(p)
-        
+
     # Rotate and translate
     R = [cos(b[3]) -sin(b[3]); sin(b[3]) cos(b[3])]
     q[1:2,:] = R*p[1:2,:] .+ b[1:2]
@@ -117,7 +117,7 @@ end
 
 
 """
-Predict the expected range-bearing observation z (and Jacobian H) of 
+Predict the expected range-bearing observation z (and Jacobian H) of
 feature/landmark idf in joint pose + landmark state vector x
 """
 function predict_observation(x::AbstractVector, idf::Int)
@@ -127,7 +127,7 @@ function predict_observation(x::AbstractVector, idf::Int)
     fpos = pose_length + idf*2 - 1
 
     # Distance from vehicle to landmark
-    dx = x[fpos] - x[1] 
+    dx = x[fpos] - x[1]
     dy = x[fpos + 1] - x[2]
     d2 = dx^2 + dy^2
     d = sqrt(d2)
@@ -144,7 +144,7 @@ function predict_observation(x::AbstractVector, idf::Int)
     H = zeros(2, length(x))
     H[:,1:3]         = [-xd -yd 0; yd2 -xd2 -1]
     H[:,fpos:fpos+1] = [ xd  yd;  -yd2  xd2]
- 
+
     z, H
 end
 
@@ -154,12 +154,12 @@ Advance equations of motion for vehicle by dt and update vehicle pose in-place
 This uses the ideal/target speed and steering angle
 """
 function step_vehicle!(vehicle::Vehicle, dt::AbstractFloat)
-    
+
     x, y, phi = vehicle.pose
     v = vehicle.target_speed
     g = vehicle.target_gamma
 
-    vehicle.pose = [x + v*dt*cos(g + phi); 
+    vehicle.pose = [x + v*dt*cos(g + phi);
                     y + v*dt*sin(g + phi);
                     mpi_to_pi(phi + v*dt*sin(g)/vehicle.wheelbase)]
 end
@@ -179,7 +179,7 @@ function steer!(vehicle::Vehicle, waypoints::AbstractArray, d_min::AbstractFloat
 
     # Get coords of current waypoint
     cwp = waypoints[:, iwp]
-    
+
     # Determine if current waypoint has been reached
     d2 = (cwp[1] - x)^2 + (cwp[2] - y)^2
     if d2 < d_min^2

@@ -4,7 +4,7 @@ import GR
 function draw_scene(scene::Scene, state::EKFSlamState, vehicle::Vehicle)
     draw_map(scene.landmarks, scene.waypoints)
     draw_vehicle(frame_transform(vehicle.shape, vehicle.pose))
-    if scene.nsteps > 1        
+    if scene.nsteps > 1
         draw_true_path(scene.true_track, scene.nsteps)
         draw_slam_path(scene.slam_track, scene.nsteps)
         draw_vehicle_ellipse(state.x, state.cov)
@@ -44,7 +44,7 @@ function draw_landmarks(lm)
     GR.setmarkersize(1.25)
     GR.setmarkercolorind(4)
     GR.setmarkertype(GR.MARKERTYPE_SQUARE)
-    
+
     lmx, lmy = vec(lm[1,:]), vec(lm[2,:])
     GR.polymarker(lmx, lmy)
 end
@@ -75,9 +75,9 @@ end
 Draw filled polygon with x,y points given by shape array
 """
 function draw_vehicle(shape)
-    
+
     GR.settransparency(0.8)
-    GR.setfillintstyle(1) # solid    
+    GR.setfillintstyle(1) # solid
     GR.setfillcolorind(981)
     GR.fillarea(vec(shape[1,:]), vec(shape[2,:]))
 end
@@ -110,10 +110,10 @@ end
 
 
 function draw_vehicle_ellipse(x, P)
-    
+
     nsigma = 2 # Size of ellipse
     nsegs = 16 # Number of line segments to use
-    
+
     ell = ellipse(x[1:2], P[1:2, 1:2], nsigma, nsegs)
 
     GR.settransparency(0.8)
@@ -125,15 +125,15 @@ end
 
 
 function draw_landmark_ellipses(ellipses)
-    
+
     n = floor(Int, size(ellipses,1)/2)
-    if n == 0 
-        return 
+    if n == 0
+        return
     end
-    
+
     GR.settransparency(0.5)
     GR.setlinecolorind(1)
-    
+
     for i = 1:n
         GR.polyline(vec(ellipses[2i-1,:]), vec(ellipses[2i,:]))
     end

@@ -20,14 +20,14 @@ function predict(state::EKFSlamState, vehicle::Vehicle, Q::AbstractMatrix, dt::A
     vts = v*dt*s
     vtc = v*dt*c
 
-    # Jacobians   
+    # Jacobians
     Gv = [1 0 -vts;
           0 1 vtc;
           0 0 1]
     Gu = [dt*c -vts;
           dt*s  vtc;
           dt*sin(g)/w v*dt*cos(g)/w]
-  
+
     # Predict covariance
     P[1:3,1:3] = Gv*P[1:3,1:3]*Gv' + Gu*Q*Gu'
     if size(P, 1) > 3
@@ -36,7 +36,7 @@ function predict(state::EKFSlamState, vehicle::Vehicle, Q::AbstractMatrix, dt::A
     end
 
     # Predict pose
-    x[1:3] = [x[1] + vtc; 
+    x[1:3] = [x[1] + vtc;
               x[2] + vts;
               mpi_to_pi(phi + v*dt*sin(g)/w)]
     x, P
@@ -55,7 +55,7 @@ function update(state::EKFSlamState, z, R, idf)
     for i = 1:lenz
         ii = 2*i + (-1:0)
         zp, H[ii,:] = predict_observation(x, idf[i])
-        
+
         v[ii] = [z[1,i] - zp[1]; mpi_to_pi(z[2,i] - zp[2])]
         RR[ii,ii] = R
     end
