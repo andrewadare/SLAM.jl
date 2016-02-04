@@ -38,8 +38,12 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
     send_json("state", d, client)
 
     # Send observations, but only when just recorded
-    if simdata.state_updated
-        d = Dict("z" => simdata.z, "nobs" => simdata.nz)
+    if simdata.state_updated && simdata.nz > 0
+        nz = simdata.nz
+        z = simdata.z[:, 1:nz]
+        d = Dict("range" => vec(z[1,:]),
+                 "bearing" => vec(z[2,:]),
+                 "n_observations" => nz)
         send_json("observations", d, client)
     end
 

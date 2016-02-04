@@ -84,7 +84,7 @@ $( function() {
         .attr( 'y1', simTrack[ n - 2 ].y )
         .attr( 'x2', simTrack[ n - 1 ].x )
         .attr( 'y2', simTrack[ n - 1 ].y );
-      
+
       slamTrackSvg
         .append( 'line' )
         .attr( 'x1', slamTrack[ n - 2 ].x )
@@ -95,9 +95,10 @@ $( function() {
   }
 
   function drawLidar( data ) {
-    // TODO
+    console.log('nz', data.n_observations );
+    console.log('    r', data.range );
+    console.log('    b', data.bearing );
   }
-
 
   ws.onopen = function( event ) {
     ws.send( JSON.stringify( {
@@ -124,13 +125,16 @@ $( function() {
         drawSimTrack( msg.data );
         break;
       case 'state':
+        // TODO
+        break;
+      case 'observations':
         drawLidar( msg.data );
         break;
     }
   }
 
   $( '#start' ).click( function() {
-  
+
     // Send message object as a JSON-formatted string.
     ws.send( JSON.stringify( {
       type: 'request',
