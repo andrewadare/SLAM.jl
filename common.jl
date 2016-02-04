@@ -25,12 +25,16 @@ end
 type EKFSlamState{T<:Real} <: SlamState
     x::Vector{T}                       # Joint pose + feature state
     cov::Matrix{T}                     # Joint pose + feature cov matrix
+    z::Matrix{T}                       # Recent [r, theta] feature observations
+    nz::Int
 end
 
 # Particle Filter SLAM state and covariance
 type PFSlamState{T<:Real} <: SlamState
     n::Int
     particles::Vector{Particle{T}}
+    z::Matrix{T}                       # Recent [r, theta] feature observations
+    nz::Int
 end
 
 
