@@ -100,17 +100,22 @@ function mpi_to_pi(phi::AbstractFloat)
 end
 
 
-function frame_transform(p, b)
+"""
+Return a rotated and translated pose given the pose l in a local frame and the
+pose g in the global frame. l and g should be vectors whose first three elements
+are x, y, and phi.
+"""
+function frame_transform(l, g)
 
-    q = zeros(p)
+    q = zeros(l)
 
     # Rotate and translate
-    R = [cos(b[3]) -sin(b[3]); sin(b[3]) cos(b[3])]
-    q[1:2,:] = R*p[1:2,:] .+ b[1:2]
+    R = [cos(g[3]) -sin(g[3]); sin(g[3]) cos(g[3])]
+    q[1:2,:] = R*l[1:2,:] .+ g[1:2]
 
-    # if p is a pose and not a point
-    if size(p,1)==3
-        q[3,:] = mpi_to_pi(p[3,:] + b[3])
+    # if l is a pose and not a point
+    if size(l,1)==3
+        q[3,:] = mpi_to_pi(l[3,:] + g[3])
     end
     q
 end
@@ -213,3 +218,47 @@ function steer!(vehicle::Vehicle, waypoints::AbstractArray, d_min::AbstractFloat
     return
 end
 
+"""
+Make a single 2D n-sigma Gaussian contour centered at x with axes given
+by covariance matrix P
+"""
+function ellipse(x, P, nsigma, nsegs)
+
+    # Approximate smooth ellipse with nsegs line segments (nsegs + 1 points)
+    phi = 0:2*pi/nsegs:2*pi
+
+    nsigma*sqrtm(P)*[cos(phi)'; sin(phi)'] .+ x[1:2]
+end
+
+
+function compute_landmark_ellipses(x, P)
+    nsigma = 2 # Size of ellipse
+    nsegs = 12 # Number of line segments to use
+
+    # Number of observed features/landmarks
+    nf = floor(Int, (length(x) - 3)/2)
+
+    # Allocate rows for x,y and columns for npoints/ellipse times # ellipses
+    ellipses = Array{Float64}(2*nf, nsegs + 1)
+
+    for i = 1:nf
+        j = (2*i + 2):(2*i + 3)
+
+        ell = ellipse(x[j], P[j,j], nsigma, nsegs)
+        ellipses[2i-1:2i, :] = ellipse(x[j], P[j,j], nsigma, nsegs)
+    end
+    ellipses
+end
+
+"""
+Return array of line segments for laser range-bearing measurements.
+Columns contain vehicle and feature positions [vx; vy; fx; fy]
+"""
+function laser_lines(z, x)
+    len = size(z, 2)
+    lines = Array{Float64}(4, len)
+    lines[1,:] = zeros(1, len) + x[1]
+    lines[2,:] = zeros(1, len) + x[2]
+    lines[3:4,:] = frame_transform([z[1,:].*cos(z[2,:]); z[1,:].*sin(z[2,:])], x)
+    lines
+end

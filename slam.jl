@@ -23,7 +23,10 @@ export
     add_features,
     associate,
     compute_association,
-    predict_observation
+    predict_observation,
+    ellipse,
+    compute_landmark_ellipses,
+    laser_lines
 
 
 include("common.jl")
