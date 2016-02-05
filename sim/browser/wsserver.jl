@@ -12,24 +12,10 @@ include("../ekfslam-sim.jl")
 simdata = ekfsim_setup(10, "../course1.txt")
 
 """
-Create array of Dicts from key strings and first two rows of array.
+Callback passed to simulation providing access to simulation state during
+runtime. This method writes messages to a WebSocket client for browser
+visualization.
 """
-function pair_array(a::Matrix, key1::AbstractString, key2::AbstractString)
-    [Dict(key1 => a[1,i], key2 => a[2,i]) for i in 1:size(a, 2)]
-end
-
-"""
-Write JSON-formatted message to websocket client.
-Recipients expect the schema defined here, so modify with care.
-"""
-function send_json(name::AbstractString, data::Any, client::WebSockets.WebSocket)
-    msg = Dict{AbstractString, Any}()
-    msg["type"] = name
-    msg["data"] = data
-    msg["timestamp"] = time()
-    write(client, JSON.json(msg))
-end
-
 function monitor(simdata::SimData, client::WebSockets.WebSocket)
 
     n = simdata.scene.nsteps
@@ -48,14 +34,72 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
     d = Dict("pose" => simdata.state.x[1:3], "cov" => simdata.state.cov)
     send_json("state", d, client)
 
-    # Send observations
+    # # Send observations
+    # if simdata.state_updated && simdata.nz > 0
+    #     z = simdata.z[:, 1:simdata.nz]
+    #     send_json("observations", dict_array(z, ["range", "bearing"]), client)
+    # end
+
+    # Send line endpoints for lidar beams from vehicle to observed feature
     if simdata.state_updated && simdata.nz > 0
-        z = simdata.z[:, 1:simdata.nz]
-        send_json("observations", pair_array(z, "range", "bearing"), client)
+        lines = laser_lines(simdata.z[:,1:simdata.nz], simdata.state.x[1:3])
+        send_json("lidar", dict_array(lines, ["x1", "y1", "x2", "y2"]), client)
     end
 
     return
 end
+
+
+"""
+Write JSON-formatted message to websocket client.
+Recipients expect the schema defined here, so modify with care.
+"""
+function send_json(name::AbstractString, data::Any, client::WebSockets.WebSocket)
+    msg = Dict{AbstractString, Any}()
+    msg["type"] = name
+    msg["data"] = data
+    msg["timestamp"] = time()
+    write(client, JSON.json(msg))
+end
+
+
+"""
+Create array of Dicts from Matrix `a` using the supplied list of `keys`.
+Example:
+        julia> a = rand(1:10, 2, 3)
+        2x3 Array{Int64,2}:
+         10  5  8
+          5  3  6
+
+        julia> keys = ["a", "b"]
+        2-element Array{ASCIIString,1}:
+         "a"
+         "b"
+
+        julia> dict_array(a, keys)
+        3-element Array{Dict{ASCIIString,Int64},1}:
+         Dict("b"=>5,"a"=>10)
+         Dict("b"=>3,"a"=>5)
+         Dict("b"=>6,"a"=>8)
+"""
+function dict_array{T,S}(a::Matrix{T}, keys::Vector{S})
+    assert(length(keys) <= size(a, 1))
+
+    n = size(a, 2)
+    da = Vector{Dict{S, T}}(n)
+
+    # Loop over columns of a
+    for j = 1:n
+        d = Dict{S,T}()
+
+        for (i, key) in enumerate(keys)
+            d[key] = a[i,j]
+        end
+        da[j] = d
+    end
+    da
+end
+
 
 wsh = WebSocketHandler() do req, client
     println("Handling WebSocket client")
@@ -71,8 +115,8 @@ wsh = WebSocketHandler() do req, client
 
         if haskey(msg, "text") && msg["text"] == "ready"
             println("Received update from client: ready")
-            send_json("waypoints", pair_array(simdata.scene.waypoints, "x", "y"), client)
-            send_json("landmarks", pair_array(simdata.scene.landmarks, "x", "y"), client)
+            send_json("waypoints", dict_array(simdata.scene.waypoints, ["x", "y"]), client)
+            send_json("landmarks", dict_array(simdata.scene.landmarks, ["x", "y"]), client)
         end
 
         if haskey(msg, "text") && msg["text"] == "start"
@@ -86,7 +130,7 @@ end
 
 
 """
-Serve page(s) and supporting css or js files
+Serve page(s) and supporting files over HTTP.
 Files will not be loaded by browser unless they appear in this list!
 Paths are relative to the location of this script (or invocation location?)
 """

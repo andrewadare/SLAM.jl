@@ -98,23 +98,22 @@ $( function() {
   }
 
   function drawLidar( data ) {
-    // console.log( data );
-    // console.log('nz', data.n_observations );
-    // console.log('    r', data.range );
-    // console.log('    b', data.bearing );
-
-    var n = simTrack.length;
-
-    // TODO pick up here
-    scene.selectAll( '.lidar-lines' )
-        // .remove()
-        .data( data )
-        // .enter()
+    var i = -1;
+    while ( ++i < data.length ) {
+      scene.selectAll( '.lidar-lines' )
         .append( 'line' )
-        .attr( 'x1', simTrack[ n - 1 ].x )
-        .attr( 'y1', simTrack[ n - 1 ].y )
-        .attr( 'x2', function( d ) { return simTrack[ n - 1 ].x + d.range; } )
-        .attr( 'y2', function( d ) { return simTrack[ n - 1 ].y + d.range; } );
+        .attr( 'x1', xscale( data[ i ].x1 ) )
+        .attr( 'y1', yscale( data[ i ].y1 ) )
+        .attr( 'x2', xscale( data[ i ].x2 ) )
+        .attr( 'y2', yscale( data[ i ].y2 ) )
+        .transition()
+        .duration( 500 )
+        .style( 'opacity', 0 )
+        .each( 'end', function() {
+          d3.select( this )
+            .remove();
+        });
+    }
   }
 
   ws.onopen = function( event ) {
@@ -143,7 +142,7 @@ $( function() {
       case 'state':
         // TODO
         break;
-      case 'observations':
+      case 'lidar':
         drawLidar( msg.data );
         break;
     }
@@ -159,5 +158,25 @@ $( function() {
     }));
   });
 
+  // Rotate and translate from a local frame to a global one.
+  // Inputs l and g are objects with attributes x, y, and phi.
+  function localToGlobal( l, g ) {
+
+    var c = Math.cos(g.phi);
+    var s = Math.sin(g.phi);
+
+    var p = l.phi + g.phi;
+
+    if ( p > Math.PI )
+      p -= 2*Math.PI;
+    if ( p < -Math.PI )
+      p += 2*Math.PI;
+
+    return {
+      x: c*l.x - s*l.y + g.x,
+      y: s*l.x + c*l.y + g.y,
+      phi: p
+    }
+  }
 
 });
