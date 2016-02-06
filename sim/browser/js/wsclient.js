@@ -1,4 +1,5 @@
 $( function() {
+  'use strict';
 
   // Initiate a WebSocket connection
   var ws = new WebSocket( 'ws://' + window.location.host );
