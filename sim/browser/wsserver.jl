@@ -52,7 +52,7 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
 
     # Write uncertainty ellipse for vehicle position
     l,u = eig(simdata.state.cov[1:2, 1:2])
-    vehicle_ellipse = [pose[1] pose[2] sqrt(l[1]) sqrt(l[2]) atan2(u[1,1], u[2,1])]'
+    vehicle_ellipse = [pose[1] pose[2] sqrt(l[1]) sqrt(l[2]) atan2(u[2,1], u[1,1])]'
     send_json("vehicle-ellipse", dict_array(vehicle_ellipse, ellipse_keys), client)
 
     return
@@ -68,7 +68,7 @@ function feature_ellipses(x, cov)
     for i = 1:nf
         j = (2*i + 2):(2*i + 3)
         l,u = eig(cov[j,j])
-        ellipses[:, i] = [x[j]; sqrt(l); atan2(u[1,1], u[2,1])]
+        ellipses[:, i] = [x[j]; sqrt(l); atan2(u[2,1], u[1,1])]
     end
     ellipses
 end

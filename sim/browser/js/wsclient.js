@@ -66,8 +66,8 @@ $( function() {
       .duration( 750 )
       .attr( 'width', l )
       .attr( 'height', l )
-      .attr( 'rx', l/8)
-      .attr( 'ry', l/8);
+      .attr( 'rx', l/10)
+      .attr( 'ry', l/10);
   }
 
 
@@ -129,14 +129,17 @@ $( function() {
       .attr( 'ry', ryscale( nSigma*d.ry ) )
       .attr( 'transform',
              'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
-             'rotate(' + d.phi*180/Math.PI + ')' );
+             'rotate(' + -d.phi*180/Math.PI + ')' );
   }
 
   function drawFeatures( data ) {
     var nSigma = 2;
 
-    function xyMove( d ) {
-      return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ')';
+    // Since y is up in the simulation, but upside down in SVG land, we
+    // negate phi to get the correct CCW rotation.
+    function transform( d ) {
+      return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
+             'rotate(' + -d.phi*180/Math.PI + ')';
     }
     function rx( d ) {
       return xscale( nSigma*d.rx );
@@ -145,28 +148,26 @@ $( function() {
       return ryscale( nSigma*d.ry );
     }
 
-    // 'rotate(' + d.phi*180/Math.PI + ')' );
-
     // Display feature symbols
     scene.selectAll( '.feature' )
       .data( data )
-      .attr( 'transform', xyMove )
+      .attr( 'transform', transform )
       .enter().append( 'path' )
       .attr( 'class', 'feature' )
-      .attr( 'd', d3.svg.symbol().type( 'cross' ) )
-      .attr( 'transform', xyMove );
+      .attr( 'd', d3.svg.symbol().type( 'circle' ) )
+      .attr( 'transform', transform );
 
-    // Display feature uncertainty ellipses TODO: rotation
+    // Display feature uncertainty ellipses
     scene.selectAll( '.feature-ellipse' )
       .data( data )
       .attr( 'rx', rx )
       .attr( 'ry', ry )
-      .attr( 'transform', xyMove )
+      .attr( 'transform', transform )
       .enter().append( 'ellipse' )
       .attr( 'class', 'feature-ellipse' )
       .attr( 'rx',  rx )
       .attr( 'ry', ry )
-      .attr( 'transform', xyMove );
+      .attr( 'transform', transform );
 
   }
 
