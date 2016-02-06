@@ -122,15 +122,52 @@ $( function() {
   }
 
   function drawVehicleEllipse( data ) {
-    // console.log(data);
     var d = data[0];
     var nSigma = 2;
     vehicleEllipse
       .attr( 'rx',  xscale( nSigma*d.rx ) )
       .attr( 'ry', ryscale( nSigma*d.ry ) )
       .attr( 'transform',
-            'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
-            'rotate(' + d.phi*180/Math.PI + ')' );
+             'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
+             'rotate(' + d.phi*180/Math.PI + ')' );
+  }
+
+  function drawFeatures( data ) {
+    var nSigma = 2;
+
+    function xyMove( d ) {
+      return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ')';
+    }
+    function rx( d ) {
+      return xscale( nSigma*d.rx );
+    }
+    function ry( d ) {
+      return ryscale( nSigma*d.ry );
+    }
+
+    // 'rotate(' + d.phi*180/Math.PI + ')' );
+
+    // Display feature symbols
+    scene.selectAll( '.feature' )
+      .data( data )
+      .attr( 'transform', xyMove )
+      .enter().append( 'path' )
+      .attr( 'class', 'feature' )
+      .attr( 'd', d3.svg.symbol().type( 'cross' ) )
+      .attr( 'transform', xyMove );
+
+    // Display feature uncertainty ellipses TODO: rotation
+    scene.selectAll( '.feature-ellipse' )
+      .data( data )
+      .attr( 'rx', rx )
+      .attr( 'ry', ry )
+      .attr( 'transform', xyMove )
+      .enter().append( 'ellipse' )
+      .attr( 'class', 'feature-ellipse' )
+      .attr( 'rx',  rx )
+      .attr( 'ry', ry )
+      .attr( 'transform', xyMove );
+
   }
 
   ws.onopen = function( event ) {
@@ -156,14 +193,15 @@ $( function() {
       case 'tracks':
         drawSimTrack( msg.data );
         break;
-      case 'state':
-        // TODO
-        break;
       case 'lidar':
         drawLidar( msg.data );
         break;
       case 'vehicle-ellipse':
         drawVehicleEllipse( msg.data );
+        break;
+      case 'feature-ellipses':
+        drawFeatures( msg.data );
+        break;
     }
   }
 
