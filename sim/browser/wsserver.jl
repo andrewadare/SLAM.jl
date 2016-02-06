@@ -20,6 +20,7 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
 
     n = simdata.scene.nsteps
     tt, st = simdata.scene.true_track, simdata.scene.slam_track
+    pose = simdata.state.x[1:3]
 
     # Send latest pose information
     d = Dict("ideal" => Dict("x"   => tt[1, n],
@@ -31,7 +32,7 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
     send_json("tracks", d, client)
 
     # Send SLAM state
-    d = Dict("pose" => simdata.state.x[1:3], "cov" => simdata.state.cov)
+    d = Dict("pose" => pose, "cov" => simdata.state.cov)
     send_json("state", d, client)
 
     # # Send observations
@@ -45,6 +46,15 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
         lines = laser_lines(simdata.z[:,1:simdata.nz], simdata.state.x[1:3])
         send_json("lidar", dict_array(lines, ["x1", "y1", "x2", "y2"]), client)
     end
+
+    # Write the 5 parameters for a rotated covariance ellipse at the inferred
+    # vehicle position
+    l,u = eig(simdata.state.cov[1:2, 1:2])
+    send_json("vehicle-ellipse",
+              dict_array([pose[1] pose[2] sqrt(l[1]) sqrt(l[2]) atan2(u[1,1], u[2,1])]',
+                         ["cx", "cy", "rx", "ry", "phi"]),
+              client)
+
 
     return
 end

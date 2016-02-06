@@ -12,6 +12,9 @@ $( function() {
   var yscale = d3.scale.linear()
       .domain([ 0, 100 ])
       .range([ height, 0 ]);
+  var ryscale = d3.scale.linear()
+      .domain([ 0, 100 ])
+      .range([ 0, height ]);
   var scene = d3.select( '.scene' )
       .attr( 'width', width )
       .attr( 'height', height );
@@ -25,10 +28,12 @@ $( function() {
       .attr( 'class', 'slamtrack');
   var lidarLines = scene.append( 'g' )
       .attr( 'class', 'lidar-lines' );
-
+  var vehicleEllipse = scene.append( 'g' )
+      .attr( 'class', 'vehicle-ellipse' )
+      .append( 'ellipse' );
 
   function drawWaypoints( data ) {
-    scene.selectAll( 'circle' )
+    scene.selectAll( '.waypoints' )
       .data( data )
       .enter()
       .append( 'circle' )
@@ -45,10 +50,11 @@ $( function() {
 
     var l = 10; // Edge length of square
 
-    var landmarks = scene.selectAll( 'g' )
+    var landmarks = scene.selectAll( 'g .landmarks' )
       .data( data )
       .enter()
       .append( 'g' )
+      .attr( 'class', 'landmarks' )
       .attr( 'transform', function( d ) {
         return 'translate(' + (xscale( d.x ) - l/2) + ',' + (yscale( d.y ) - l/2) + ')';
       });
@@ -61,8 +67,7 @@ $( function() {
       .attr( 'width', l )
       .attr( 'height', l )
       .attr( 'rx', l/8)
-      .attr( 'ry', l/8)
-      .attr( 'class', 'landmarks' );
+      .attr( 'ry', l/8);
   }
 
 
@@ -116,6 +121,18 @@ $( function() {
     }
   }
 
+  function drawVehicleEllipse( data ) {
+    // console.log(data);
+    var d = data[0];
+    var nSigma = 2;
+    vehicleEllipse
+      .attr( 'rx',  xscale( nSigma*d.rx ) )
+      .attr( 'ry', ryscale( nSigma*d.ry ) )
+      .attr( 'transform',
+            'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
+            'rotate(' + d.phi*180/Math.PI + ')' );
+  }
+
   ws.onopen = function( event ) {
     ws.send( JSON.stringify( {
       type: 'update',
@@ -145,6 +162,8 @@ $( function() {
       case 'lidar':
         drawLidar( msg.data );
         break;
+      case 'vehicle-ellipse':
+        drawVehicleEllipse( msg.data );
     }
   }
 
@@ -157,26 +176,5 @@ $( function() {
       date: Date.now()
     }));
   });
-
-  // Rotate and translate from a local frame to a global one.
-  // Inputs l and g are objects with attributes x, y, and phi.
-  function localToGlobal( l, g ) {
-
-    var c = Math.cos(g.phi);
-    var s = Math.sin(g.phi);
-
-    var p = l.phi + g.phi;
-
-    if ( p > Math.PI )
-      p -= 2*Math.PI;
-    if ( p < -Math.PI )
-      p += 2*Math.PI;
-
-    return {
-      x: c*l.x - s*l.y + g.x,
-      y: s*l.x + c*l.y + g.y,
-      phi: p
-    }
-  }
 
 });

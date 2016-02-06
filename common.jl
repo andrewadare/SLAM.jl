@@ -244,7 +244,6 @@ function compute_landmark_ellipses(x, P)
     for i = 1:nf
         j = (2*i + 2):(2*i + 3)
 
-        ell = ellipse(x[j], P[j,j], nsigma, nsegs)
         ellipses[2i-1:2i, :] = ellipse(x[j], P[j,j], nsigma, nsegs)
     end
     ellipses
