@@ -29,9 +29,25 @@ $( function() {
       .attr( 'class', 'slamtrack');
   var lidarLines = scene.append( 'g' )
       .attr( 'class', 'lidar-lines' );
-  var vehicleEllipse = scene.append( 'g' )
-      .attr( 'class', 'vehicle-ellipse' )
+  var vehicle = scene.append( 'g' )
+      .attr( 'class', 'vehicle' );
+
+  vehicle
       .append( 'ellipse' );
+  vehicle
+      .append( 'path' )
+      .attr( 'class', 'lidar-sweep');
+
+  // Since y is up in the simulation, but upside down in SVG land, we
+  // negate phi to get the correct CCW rotation.
+  function transformEllipse( d ) {
+    return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
+           'rotate(' + -d.phi*180/Math.PI + ')';
+  }
+
+  function xyTranslate( d ) {
+    return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ';
+  }
 
   function drawWaypoints( data ) {
     scene.selectAll( '.waypoints' )
@@ -113,7 +129,7 @@ $( function() {
         .attr( 'x2', xscale( data[ i ].x2 ) )
         .attr( 'y2', yscale( data[ i ].y2 ) )
         .transition()
-        .duration( 500 )
+        .duration( 250 )
         .style( 'opacity', 0 )
         .each( 'end', function() {
           d3.select( this )
@@ -122,26 +138,33 @@ $( function() {
     }
   }
 
-  function drawVehicleEllipse( data ) {
-    var d = data[0];
+  function drawVehicle( data ) {
     var nSigma = 2;
-    vehicleEllipse
-      .attr( 'rx',  xscale( nSigma*d.rx ) )
-      .attr( 'ry', ryscale( nSigma*d.ry ) )
-      .attr( 'transform',
-             'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
-             'rotate(' + -d.phi*180/Math.PI + ')' );
+
+    var arc = d3.svg.arc()
+      .innerRadius(20)
+      .outerRadius(xscale( 30 ))
+      .startAngle( 0 )
+      .endAngle( Math.PI );
+
+    scene.selectAll( '.vehicle ellipse' )
+      .data( data )
+      .attr( 'rx', function( d ) { return xscale( nSigma*d.rx ); } )
+      .attr( 'ry', function( d ) { return ryscale( nSigma*d.ry ); } )
+      .attr( 'transform', transformEllipse );
+
+    scene.selectAll( '.lidar-sweep' )
+      .data( data )
+      .attr( 'd', arc )
+      .attr( 'transform', function ( d ) {
+        return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
+               'rotate(' + -d.vehicle_phi*180/Math.PI + ')';
+      });
   }
 
   function drawFeatures( data ) {
     var nSigma = 2;
 
-    // Since y is up in the simulation, but upside down in SVG land, we
-    // negate phi to get the correct CCW rotation.
-    function transform( d ) {
-      return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
-             'rotate(' + -d.phi*180/Math.PI + ')';
-    }
     function rx( d ) {
       return xscale( nSigma*d.rx );
     }
@@ -152,23 +175,23 @@ $( function() {
     // Display feature symbols
     scene.selectAll( '.feature' )
       .data( data )
-      .attr( 'transform', transform )
+      .attr( 'transform', xyTranslate )
       .enter().append( 'path' )
       .attr( 'class', 'feature' )
       .attr( 'd', d3.svg.symbol().type( 'circle' ) )
-      .attr( 'transform', transform );
+      .attr( 'transform', xyTranslate );
 
     // Display feature uncertainty ellipses
     scene.selectAll( '.feature-ellipse' )
       .data( data )
       .attr( 'rx', rx )
       .attr( 'ry', ry )
-      .attr( 'transform', transform )
+      .attr( 'transform', transformEllipse )
       .enter().append( 'ellipse' )
       .attr( 'class', 'feature-ellipse' )
-      .attr( 'rx',  rx )
+      .attr( 'rx', rx )
       .attr( 'ry', ry )
-      .attr( 'transform', transform );
+      .attr( 'transform', transformEllipse );
 
   }
 
@@ -199,7 +222,7 @@ $( function() {
         drawLidar( msg.data );
         break;
       case 'vehicle-ellipse':
-        drawVehicleEllipse( msg.data );
+        drawVehicle( msg.data );
         break;
       case 'feature-ellipses':
         drawFeatures( msg.data );

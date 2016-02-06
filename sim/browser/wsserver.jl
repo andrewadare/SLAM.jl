@@ -23,7 +23,6 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
     pose = simdata.state.x[1:3]
 
     # The 5 parameters for a rotated covariance ellipse
-    ellipse_keys = ["cx", "cy", "rx", "ry", "phi"]
 
     # Send latest pose information
     d = Dict("ideal" => Dict("x"   => tt[1, n],
@@ -46,14 +45,18 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
         # Write feature uncertainty ellipses
         if length(simdata.state.x) > 3
             ellipses = feature_ellipses(simdata.state.x, simdata.state.cov)
+            ellipse_keys = ["cx", "cy", "rx", "ry", "phi"]
             send_json("feature-ellipses", dict_array(ellipses, ellipse_keys), client)
         end
     end
 
     # Write uncertainty ellipse for vehicle position
-    l,u = eig(simdata.state.cov[1:2, 1:2])
-    vehicle_ellipse = [pose[1] pose[2] sqrt(l[1]) sqrt(l[2]) atan2(u[2,1], u[1,1])]'
-    send_json("vehicle-ellipse", dict_array(vehicle_ellipse, ellipse_keys), client)
+    begin
+        l,u = eig(simdata.state.cov[1:2, 1:2])
+        vehicle_ellipse = [pose' sqrt(l)' atan2(u[2,1], u[1,1])]'
+        ellipse_keys = ["cx", "cy", "vehicle_phi", "rx", "ry", "phi"]
+        send_json("vehicle-ellipse", dict_array(vehicle_ellipse, ellipse_keys), client)
+    end
 
     return
 end
