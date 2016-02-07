@@ -1,5 +1,5 @@
 function associate(state::SlamState, z, R, gate1, gate2)
-    # 
+    #
     # Simple gated nearest-neighbour data-association. No clever feature
     # caching tricks to speed up association, so computation is O(N), where
     # N is the number of features in the state.
@@ -21,7 +21,7 @@ function associate(state::SlamState, z, R, gate1, gate2)
         jbest = 0
         nbest = Inf
         outer = Inf
-        
+
         # search for neighbours
         for j = 1:Nf
             nis, nd = compute_association(x, P, z[:,i], R, j)
@@ -50,7 +50,7 @@ function associate(state::SlamState, z, R, gate1, gate2)
 end
 
 function compute_association(x, P, z, R, idf)
-    # Return normalised innovation squared (ie, Mahalanobis distance) and 
+    # Return normalised innovation squared (ie, Mahalanobis distance) and
     # normalised distance
     zp, H = predict_observation(x, idf)
     v = z - zp
