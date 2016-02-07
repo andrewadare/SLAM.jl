@@ -148,8 +148,19 @@ wsh = WebSocketHandler() do req, client
 
         if haskey(msg, "text") && msg["text"] == "start"
             println("Answering request: start")
-            # TODO re-initialize so sim can be re-run by reloading page
+            println("Running simulation...")
             sim!(simdata, monitor, [simdata, client])
+            println("Done.")
+        end
+
+        if haskey(msg, "text") && msg["text"] == "reset"
+            println("Resetting simulation...")
+            simdata.scene.nsteps = 0
+            simdata.vehicle.waypoint_id = 1
+            simdata.vehicle.pose = initial_pose(simdata.scene)
+            simdata.state = EKFSlamState(simdata.vehicle.pose, zeros(3, 3))
+            simdata.state_updated = false
+            println("Simulation reset.")
         end
 
     end

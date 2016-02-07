@@ -20,7 +20,6 @@ $( function() {
       .attr( 'width', width )
       .attr( 'height', height );
 
-  // Streaming data for vehicle track (ideal and inferred)
   var simTrack = [];
   var slamTrack = [];
   var simTrackSvg = scene.append( 'g' )
@@ -31,12 +30,6 @@ $( function() {
       .attr( 'class', 'lidar-lines' );
   var vehicle = scene.append( 'g' )
       .attr( 'class', 'vehicle' );
-
-  vehicle
-      .append( 'ellipse' );
-  vehicle
-      .append( 'path' )
-      .attr( 'class', 'lidar-sweep');
 
   // Since y is up in the simulation, but upside down in SVG land, we
   // negate phi to get the correct CCW rotation.
@@ -49,18 +42,38 @@ $( function() {
     return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ';
   }
 
+  function resetSim() {
+    simTrack.length = 0;
+    slamTrack.length = 0;
+    simTrackSvg.selectAll( 'line' ).remove();
+    slamTrackSvg.selectAll( 'line' ).remove();
+    scene.selectAll( '.feature' ).remove();
+    scene.selectAll( '.feature-ellipse' ).remove();
+    scene.selectAll( '.lidar-sweep' ).remove();
+    vehicle.selectAll( 'ellipse' ).remove();
+    vehicle.selectAll( '.lidar-sweep' ).remove();
+  }
+
+  function sendReset() {
+    ws.send( JSON.stringify( {
+      type: 'request',
+      text: 'reset',
+      id:   2,
+      date: Date.now()
+    }));
+  }
+
   function drawWaypoints( data ) {
     scene.selectAll( '.waypoints' )
-      .data( data )
-      .enter()
-      .append( 'circle' )
-      .attr( 'r', 0 ) // px
-      .transition()
-      .duration( 750 )
-      .attr( 'r', 4 ) // px
-      .attr( 'cx', function( d ) { return xscale( d.x ); })
-      .attr( 'cy', function( d ) { return yscale( d.y ); })
-      .attr( 'class', 'waypoints' );
+        .data( data )
+      .enter().append( 'circle' )
+        .attr( 'r', 0 )
+        .transition()
+        .duration( 750 )
+        .attr( 'r', 4 )
+        .attr( 'cx', function( d ) { return xscale( d.x ); })
+        .attr( 'cy', function( d ) { return yscale( d.y ); })
+        .attr( 'class', 'waypoints' );
   }
 
   function drawLandmarks( data ) {
@@ -68,13 +81,12 @@ $( function() {
     var l = 10; // Edge length of square
 
     var landmarks = scene.selectAll( 'g .landmarks' )
-      .data( data )
-      .enter()
-      .append( 'g' )
-      .attr( 'class', 'landmarks' )
-      .attr( 'transform', function( d ) {
-        return 'translate(' + (xscale( d.x ) - l/2) + ',' + (yscale( d.y ) - l/2) + ')';
-      });
+        .data( data )
+      .enter().append( 'g' )
+        .attr( 'class', 'landmarks' )
+        .attr( 'transform', function( d ) {
+          return 'translate(' + (xscale( d.x ) - l/2) + ',' + (yscale( d.y ) - l/2) + ')';
+        });
 
     landmarks.append( 'rect' )
       .attr( 'width', 0 )
@@ -147,19 +159,29 @@ $( function() {
       .startAngle( 0 )
       .endAngle( Math.PI );
 
-    scene.selectAll( '.vehicle ellipse' )
-      .data( data )
-      .attr( 'rx', function( d ) { return xscale( nSigma*d.rx ); } )
-      .attr( 'ry', function( d ) { return ryscale( nSigma*d.ry ); } )
-      .attr( 'transform', transformEllipse );
+    function arcTransform( d ) {
+      return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
+             'rotate(' + -d.vehicle_phi*180/Math.PI + ')';
+    }
 
-    scene.selectAll( '.lidar-sweep' )
-      .data( data )
-      .attr( 'd', arc )
-      .attr( 'transform', function ( d ) {
-        return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
-               'rotate(' + -d.vehicle_phi*180/Math.PI + ')';
-      });
+    vehicle.selectAll( 'ellipse' )
+        .data( data )
+        .attr( 'rx', function( d ) { return xscale( nSigma*d.rx ); } )
+        .attr( 'ry', function( d ) { return ryscale( nSigma*d.ry ); } )
+        .attr( 'transform', transformEllipse )
+      .enter().append( 'ellipse' )
+        .attr( 'rx', function( d ) { return xscale( nSigma*d.rx ); } )
+        .attr( 'ry', function( d ) { return ryscale( nSigma*d.ry ); } )
+        .attr( 'transform', transformEllipse );
+
+    vehicle.selectAll( '.lidar-sweep' )
+        .data( data )
+        .attr( 'd', arc )
+        .attr( 'transform', arcTransform )
+      .enter().append( 'path' )
+        .attr( 'class', 'lidar-sweep')
+        .attr( 'd', arc )
+        .attr( 'transform', arcTransform );
   }
 
   function drawFeatures( data ) {
@@ -202,10 +224,11 @@ $( function() {
       id:   0,
       date: Date.now()
     }));
+    sendReset();
+    resetSim();
   }
 
   // Handler for messages received from server
-  // https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_client_applications
   ws.onmessage = function( event ) {
     var msg = JSON.parse( event.data );
     switch( msg.type ) {
@@ -230,14 +253,18 @@ $( function() {
     }
   }
 
-  $( '#start' ).click( function() {
-    // Send message object as a JSON-formatted string.
+  d3.select( '#start' ).on( 'click', function() {
     ws.send( JSON.stringify( {
       type: 'request',
       text: 'start',
       id:   1,
       date: Date.now()
     }));
+  });
+
+  d3.select( '#reset' ).on( 'click', function() {
+    sendReset();
+    resetSim();
   });
 
 });
