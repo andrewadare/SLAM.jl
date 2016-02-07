@@ -4,8 +4,6 @@
 using SLAM
 
 include("sim-utils.jl")
-include("gr-draw.jl")
-
 
 function ekfsim_setup(n_landmarks::Integer, waypoints_file::AbstractString)
 
@@ -72,14 +70,6 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
     dtsum = 0                          # Time since last observation
     da_table = zeros(1, n_landmarks)   # Data association table
 
-    # GR.beginprint("racecourse.png") # Bug: outputs gks.png instead
-    init_plot_window(scene.boundaries)
-    # GR.endprint()
-
-    draw_map(scene.landmarks, scene.waypoints)
-
-    ellipses = []
-
     while vehicle.waypoint_id != 0
 
         # Update heading and target waypoint
@@ -129,15 +119,5 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
         scene.slam_track[:, scene.nsteps] = state.x[1:3]
 
         monitor(args...)
-
-        # Visualize
-        draw_scene(scene, state, vehicle)
-        if simdata.state_updated
-            draw_laser_lines(simdata.z, state.x[1:3])
-            ellipses = compute_landmark_ellipses(state.x, state.cov)
-        end
-        draw_landmark_ellipses(ellipses)
-        GR.updatews()
     end
 end
-
