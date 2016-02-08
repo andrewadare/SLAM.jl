@@ -70,7 +70,10 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
     dtsum = 0                          # Time since last observation
     da_table = zeros(1, n_landmarks)   # Data association table
 
+    marker = time()
+
     while vehicle.waypoint_id != 0
+        start = marker
 
         # Update heading and target waypoint
         steer!(vehicle, scene.waypoints, d_min, dt)
@@ -119,5 +122,11 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
         scene.slam_track[:, scene.nsteps] = state.x[1:3]
 
         monitor(args...)
+
+        # Limit framerate
+        marker = time()
+        if start + dt > marker
+            sleep(start + dt - marker)
+        end
     end
 end
