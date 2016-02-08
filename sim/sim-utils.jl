@@ -51,16 +51,21 @@ function add_observation_noise(z, R)
      z[2,:] + randn(1, ncols)*sqrt(R[2,2])]
 end
 
+"""
+Return array with columns z = [range; angle] for all nearby landmark
+observations as well as the corresponding list of landmark IDs.
+"""
+function get_observations(vehicle::Vehicle, scene::Scene, R)
+    lm = scene.landmarks
+    x,y,phi = vehicle.pose
 
-function get_observations(pose, lm, landmark_tags, rmax, R)
-    # Return array with columns z = [range; angle] for all nearby landmark
-    # observations as well as the corresponding list of landmark IDs.
+    inearby = nearby_landmark_indices(vehicle.pose, lm, vehicle.sensor_range)
 
-    inearby = nearby_landmark_indices(pose, lm, rmax)
+    # Unique identifier for each landmark
+    landmark_tags = 1:size(lm, 2)
 
-    dx  = lm[1,inearby] - pose[1]
-    dy  = lm[2,inearby] - pose[2]
-    phi = pose[3]
+    dx  = lm[1,inearby] - x
+    dy  = lm[2,inearby] - y
 
     z = add_observation_noise([sqrt(dx.^2 + dy.^2); atan2(dy, dx) - phi], R)
     z, landmark_tags[inearby]
