@@ -39,6 +39,7 @@ type Vehicle{T<:Real}
     wheelbase::T     # Front-to-rear wheel separation [m]
     max_gamma::T     # Max steering angle [rad] (-max_g < g < max_g)
     steer_rate::T    # Maximum rate of change in steer angle [rad/s]
+    sensor_range::T  # [m] Landmark detection radius
     shape::Matrix{T} # Set of x,y points defining a polygon for visualization
 
     ## (Potentially) time-varying properties ##
@@ -53,7 +54,7 @@ type Vehicle{T<:Real}
     waypoint_id::Int  # Index of current target waypoint
 end
 
-Vehicle() = Vehicle(0., 0., 0., zeros(2,0), zeros(3), 0., 0., 0., 0., 0)
+Vehicle() = Vehicle(0., 0., 0., 0., zeros(2,0), zeros(3), 0., 0., 0., 0., 0)
 
 type SimData{T<:Real}
     scene::Scene{T}
