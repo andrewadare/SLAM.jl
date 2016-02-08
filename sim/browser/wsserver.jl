@@ -155,15 +155,19 @@ wsh = WebSocketHandler() do req, client
 
         if haskey(msg, "text") && msg["text"] == "start"
             start(simdata, monitor, client)
-            # simdata.paused = false
-            # @async sim!(simdata, monitor, [simdata, client])
         end
 
         if haskey(msg, "text") && msg["text"] == "reset"
             simdata.scene.nsteps = 0
+            simdata.scene.true_track *= 0
+            simdata.scene.slam_track *= 0
+
+            simdata.state.x = initial_pose(simdata.scene)
+            simdata.state.cov = zeros(3, 3)
+
             simdata.vehicle.waypoint_id = 1
             simdata.vehicle.pose = initial_pose(simdata.scene)
-            simdata.state = EKFSlamState(simdata.vehicle.pose, zeros(3, 3))
+
             simdata.state_updated = false
             simdata.paused = false
         end
