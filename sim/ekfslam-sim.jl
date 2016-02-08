@@ -21,10 +21,11 @@ function ekfsim_setup(n_landmarks::Integer, waypoints_file::AbstractString)
     vehicle.wheelbase = 4.0            # [m]
     vehicle.max_gamma = 60*pi/180      # [rad] max steering angle (-max < g < max)
     vehicle.steer_rate = 60*pi/180     # [rad/s] max rate of change in steer angle
+    vehicle.sensor_range = 30          # [m] Landmark detection radius
+    vehicle.shape = [1. -1 -1; 0 1 -1] # A little triangle for visualization
     vehicle.pose = initial_pose(scene)
     vehicle.target_speed = 8           # [m/s]
     vehicle.waypoint_id = 1            # Initialize to index of first waypoint
-    vehicle.shape = [1. -1 -1; 0 1 -1] # A little triangle for visualization
 
     # SLAM state vector
     # First three elements comprise the SLAM vehicle pose; state is augmented as
@@ -49,26 +50,22 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
 
     n_landmarks = size(scene.landmarks, 2)
 
-    lmtags = 1:n_landmarks             # Unique identifier for each landmark
     d_min = 1.0                        # [m] Once inside d_min, head for next waypoint
 
-    # Control parameters and uncertainties
-    dt = 0.025                         # [s] Interval between control updates
+    # Simulated control noise covariance matrix
     sigma_speed = 0.5                  # [m/s] Uncertainty about target speed
     sigma_steer = (3.0*pi/180)         # [rad] Uncertainty about target gamma
     Q = [sigma_speed^2 0; 0 sigma_steer^2]
 
-    # Observation parameters
-    sensor_range = 30                  # [m] Landmark detection radius
-    dt_obs = 8*dt                      # [s] Interval between data-driven state updates
+    # Simulated observation noise covariance matrix
     sigmaR = 0.1                       # [m] Range uncertainty
     sigmaB = (1.0*pi/180)              # [rad] Bearing angle uncertainty
     R = [sigmaR^2 0; 0 sigmaB^2]       # Obs. covariance matrix
 
-    # Bookkeeping variables
+    # Timing variables
+    dt = 0.025                         # [s] Interval between control updates
+    dt_obs = 8*dt                      # [s] Interval between state updates
     dtsum = 0                          # Time since last observation
-    da_table = zeros(1, n_landmarks)   # Data association table
-
     marker = time()
 
     while vehicle.waypoint_id != 0
@@ -99,7 +96,7 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
         if dtsum > dt_obs
             dtsum = 0
             simdata.state_updated = true
-            simdata.z, tags = get_observations(vehicle.pose, scene.landmarks, lmtags, sensor_range, R)
+            simdata.z, tags = get_observations(vehicle, scene, R)
             simdata.nz = size(simdata.z, 2)
 
             # Last two parameters are thresholds (Mahalanobis distances)
