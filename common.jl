@@ -62,6 +62,8 @@ type SimData{T<:Real}
     z::Matrix{T}             # Recent [range, bearing] feature observations
     nz::Int                  # Current number of observations
     state_updated::Bool      # If SLAM state occured in this step
+    paused::Bool             # Paused or running
+    nlaps::Int               # Number of loops through the waypoint list
 end
 
 ## Functions ##

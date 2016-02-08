@@ -11,6 +11,12 @@ include("../ekfslam-sim.jl")
 # It is exposed for monitoring, debugging, and flexible visualization.
 simdata = ekfsim_setup(10, "../course1.txt")
 
+function start(simdata::SimData, monitor::Function, client::WebSockets.WebSocket)
+    simdata.paused = false
+    @async sim!(simdata, monitor, [simdata, client])
+end
+
+
 """
 Callback passed to simulation providing access to simulation state during
 runtime. This method writes messages to a WebSocket client for browser
@@ -51,7 +57,7 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
     end
 
     # Write uncertainty ellipse for vehicle position
-    begin
+    let
         l,u = eig(simdata.state.cov[1:2, 1:2])
         vehicle_ellipse = [pose' sqrt(l)' atan2(u[2,1], u[1,1])]'
         ellipse_keys = ["cx", "cy", "vehicle_phi", "rx", "ry", "phi"]
@@ -60,6 +66,7 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
 
     return
 end
+
 
 function feature_ellipses(x, cov)
     # Number of observed features/landmarks
@@ -147,20 +154,25 @@ wsh = WebSocketHandler() do req, client
         end
 
         if haskey(msg, "text") && msg["text"] == "start"
-            println("Answering request: start")
-            println("Running simulation...")
-            sim!(simdata, monitor, [simdata, client])
-            println("Done.")
+            start(simdata, monitor, client)
+            # simdata.paused = false
+            # @async sim!(simdata, monitor, [simdata, client])
         end
 
         if haskey(msg, "text") && msg["text"] == "reset"
-            println("Resetting simulation...")
             simdata.scene.nsteps = 0
             simdata.vehicle.waypoint_id = 1
             simdata.vehicle.pose = initial_pose(simdata.scene)
             simdata.state = EKFSlamState(simdata.vehicle.pose, zeros(3, 3))
             simdata.state_updated = false
-            println("Simulation reset.")
+            simdata.paused = false
+        end
+
+        if haskey(msg, "text") && msg["text"] == "pause"
+            simdata.paused = !simdata.paused
+            if !simdata.paused
+                start(simdata, monitor, client)
+            end
         end
 
     end

@@ -5,8 +5,8 @@ $( function() {
   var ws = new WebSocket( 'ws://' + window.location.host );
 
   // Set up the scene SVG element ASAP to avoid reflowing
-  var width = 800;
-  var height = 800;
+  var width = 600;
+  var height = width;
   var xscale = d3.scale.linear()
       .domain([ 0, 100 ])
       .range([ 0, width ]);
@@ -258,6 +258,15 @@ $( function() {
       type: 'request',
       text: 'start',
       id:   1,
+      date: Date.now()
+    }));
+  });
+
+  d3.select( '#pause' ).on( 'click', function() {
+    ws.send( JSON.stringify( {
+      type: 'request',
+      text: 'pause',
+      id:   3,
       date: Date.now()
     }));
   });

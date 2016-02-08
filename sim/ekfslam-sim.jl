@@ -31,7 +31,7 @@ function ekfsim_setup(n_landmarks::Integer, waypoints_file::AbstractString)
     # new landmarks are observed. Covariance matrix is also augmented during simulation.
     state = EKFSlamState(vehicle.pose, zeros(3, 3))
 
-    SimData(scene, vehicle, state, zeros(2, n_landmarks), 0, false)
+    SimData(scene, vehicle, state, zeros(2, n_landmarks), 0, false, false, 2)
 end
 
 
@@ -51,7 +51,6 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
 
     lmtags = 1:n_landmarks             # Unique identifier for each landmark
     d_min = 1.0                        # [m] Once inside d_min, head for next waypoint
-    nlaps = 2                          # Number of loops through the waypoint list
 
     # Control parameters and uncertainties
     dt = 0.025                         # [s] Interval between control updates
@@ -73,15 +72,16 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
     marker = time()
 
     while vehicle.waypoint_id != 0
+
         start = marker
 
         # Update heading and target waypoint
         steer!(vehicle, scene.waypoints, d_min, dt)
 
         # If lap through waypoints is finished with more to go, start a new lap
-        if vehicle.waypoint_id == 0 && nlaps > 1
+        if vehicle.waypoint_id == 0 && simdata.nlaps > 1
             vehicle.waypoint_id = 1
-            nlaps -= 1
+            simdata.nlaps -= 1
         end
 
         # Advance vehicle's equations of motion by one timestep
@@ -123,10 +123,15 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
 
         monitor(args...)
 
-        # Limit framerate
+        # Limit frame rate for realistic timing
         marker = time()
         if start + dt > marker
             sleep(start + dt - marker)
         end
+
+        while simdata.paused
+            wait()
+        end
+
     end
 end
