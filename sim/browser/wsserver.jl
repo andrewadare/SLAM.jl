@@ -2,9 +2,6 @@ using HttpServer
 using WebSockets
 import JSON
 
-module_dir = "$(pwd())/../.."
-module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)
-
 include("../ekfslam-sim.jl")
 
 # Global object containing simulation state, updated in real time.

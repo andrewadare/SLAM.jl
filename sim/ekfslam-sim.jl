@@ -1,6 +1,15 @@
 # SLAM simulation using extended Kalman filter. Inspired by Matlab implementation
 # by T. Bailey et al (https://openslam.org/bailey-slam.html).
 
+# Here are three options to make the SLAM module (or any other) available to your code:
+#
+# 1. Include it directly: `include("path/to/SLAM.jl/src/SLAM.jl")`
+# 2. Add it to Julia's LOAD_PATH environment variable: if `module_dir = "/path/to/SLAM.jl"`,
+#    add a line like `module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)` to your code,
+#    your REPL session, or to `~/.juliarc.jl`.
+# 3. Use SLAM.jl as a package: Pkg.clone("url/to/SLAM.jl")
+include("../src/SLAM.jl")
+
 using SLAM
 
 include("sim-utils.jl")

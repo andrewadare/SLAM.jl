@@ -1,7 +1,4 @@
 
-module_dir = "$(pwd())/.."
-module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)
-
 include("ekfslam-sim.jl")
 include("gr-draw.jl")
 
