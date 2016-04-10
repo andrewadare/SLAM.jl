@@ -12,11 +12,17 @@ type Scene{T<:Real}
 end
 
 type Particle{T<:Real}
-    pose::Vector{T}                    # Inferred vehicle pose e.g. [x, y, phi]
-    features::Matrix{T}                # Feature positions (as columns)
+    pose::Pose2D{T}                    # Inferred vehicle pose (x, y, phi)
+    pcov::Matrix{T}                    # Pose covariance matrix (3 x 3)
 
-    pcov::Matrix{T}                    # Covariance matrices 3 x 3 x nparticles
-    fcov::Matrix{T}                    # Feature/landmark cov matrix
+    features::Matrix{T}                # Feature positions (as columns)
+    fcov::Vector{Matrix{T}}            # Feature cov matrices
+end
+
+type Pose2D{T:<Real}
+    x::T                               # x coordinate
+    y::T                               # y coordinate
+    phi::T                             # Azimuthal heading
 end
 
 abstract SlamState
@@ -29,8 +35,8 @@ end
 
 # Particle Filter SLAM state and covariance
 type PFSlamState{T<:Real} <: SlamState
-    n::Int
-    particles::Vector{Particle{T}}
+    particles::Vector{Particle{T}}     # Ensemble of particles
+    da_table::Vector{T}                # Data association table
 end
 
 type Vehicle{T<:Real}

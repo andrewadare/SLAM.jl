@@ -1,4 +1,4 @@
-function associate(state::SlamState, z, R, gate1, gate2)
+function associate(state::EKFSlamState, z, R, gate1, gate2)
     #
     # Simple gated nearest-neighbour data-association. No clever feature
     # caching tricks to speed up association, so computation is O(N), where
@@ -59,4 +59,37 @@ function compute_association(x, P, z, R, idf)
     nis = dot(v, inv(S)*v)
     nd = nis + log(det(S))
     nis, nd
+end
+
+function associate_known(state::PFSlamState, z::AbstractMatrix, tags::AbstractVector)
+
+    # Number of observed features, i.e. columns in features matrix
+    nfeatures = size(state.particles[1].features, 2)
+
+    zf = []
+    zn = []
+    idf = []
+    idn = []
+    table = copy(state.da_table)
+
+    for i in 1:length(tags)
+        tag = tags[i]
+        observation = z[:,i]
+
+        # If this tag (feature) is new, append it as a column to the list of new observations
+        if table[tag] == 0
+            zn = [zn observation]
+            idn = [idn; tag]
+        else
+            zf = [zf observation]
+            idf = [idf; table[tag]]
+        end
+    end
+
+    # Create IDs for new features and put in lookup table
+    n_new_features = size(zn, 2)
+    new_feature_ids = nfeatures + collect(1:n_new_features)
+    table[idn] = new_feature_ids
+
+    zf, idf, zn, table
 end
