@@ -103,12 +103,12 @@ Example:
           5  3  6
 
         julia> keys = ["a", "b"]
-        2-element Array{ASCIIString,1}:
+        2-element Array{String,1}:
          "a"
          "b"
 
         julia> dict_array(a, keys)
-        3-element Array{Dict{ASCIIString,Int64},1}:
+        3-element Array{Dict{String,Int64},1}:
          Dict("b"=>5,"a"=>10)
          Dict("b"=>3,"a"=>5)
          Dict("b"=>6,"a"=>8)
