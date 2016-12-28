@@ -28,12 +28,8 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
     # The 5 parameters for a rotated covariance ellipse
 
     # Send latest pose information
-    d = Dict("ideal" => Dict("x"   => tt[1, n],
-                             "y"   => tt[2, n],
-                             "phi" => tt[3, n]),
-             "slam" => Dict("x"   => st[1, n],
-                            "y"   => st[2, n],
-                            "phi" => st[3, n]))
+    d = Dict("ideal" => Dict("x" => tt[1, n], "y" => tt[2, n], "phi" => tt[3, n]),
+             "slam"  => Dict("x" => st[1, n], "y" => st[2, n], "phi" => st[3, n]))
     send_json("tracks", d, client)
 
     # Send SLAM state
@@ -142,7 +138,7 @@ wsh = WebSocketHandler() do req, client
     while true
 
         # Read string from client, decode, and parse to Dict
-        msg = JSON.parse(bytestring(read(client)))
+        msg = JSON.parse(String(copy(read(client))))
 
         if haskey(msg, "text") && msg["text"] == "ready"
             println("Received update from client: ready")
@@ -190,7 +186,7 @@ httph = HttpHandler() do req::Request, res::Response
     # Handle case where / means index.html
     if req.resource == "/"
         println("serving ", req.resource)
-        return Response(readall("index.html"))
+        return Response(readstring("index.html"))
     end
 
     files = [
@@ -203,7 +199,7 @@ httph = HttpHandler() do req::Request, res::Response
     for file in files
         if startswith("/$file", req.resource)
             println("serving /", file)
-            return Response(open(readall, file))
+            return Response(open(readstring, file))
         end
     end
 
