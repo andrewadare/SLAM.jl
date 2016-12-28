@@ -27,7 +27,7 @@ type EKFSlamState{T<:Real} <: SlamState
     cov::Matrix{T}                     # Joint pose + feature cov matrix
 end
 
-# Particle Filter SLAM state and covariance
+# Particle Filter SLAM state
 type PFSlamState{T<:Real} <: SlamState
     n::Int
     particles::Vector{Particle{T}}
@@ -257,10 +257,10 @@ Return array of line segments for laser range-bearing measurements.
 Columns contain vehicle and feature positions [vx; vy; fx; fy]
 """
 function laser_lines(z, x)
-    len = size(z, 2)
-    lines = Array{Float64}(4, len)
-    lines[1,:] = zeros(1, len) + x[1]
-    lines[2,:] = zeros(1, len) + x[2]
+    nlines = size(z, 2)
+    lines = Array{Float64}(4, nlines)
+    lines[1,:] = zeros(1, nlines) + x[1]
+    lines[2,:] = zeros(1, nlines) + x[2]
     lines[3:4,:] = frame_transform([z[1,:].*cos(z[2,:]); z[1,:].*sin(z[2,:])], x)
     lines
 end
