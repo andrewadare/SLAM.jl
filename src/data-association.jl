@@ -7,6 +7,7 @@ function associate(state::SlamState, z, R, gate1, gate2)
     x = state.x
     P = state.cov
     n_observables = size(z, 1)
+
     zf = Array{AbstractFloat}(n_observables, 0)
     zn = Array{AbstractFloat}(n_observables, 0)
     idf = Array{Int}(1, 0)
@@ -50,7 +51,7 @@ function associate(state::SlamState, z, R, gate1, gate2)
 end
 
 function compute_association(x, P, z, R, idf)
-    # Return normalised innovation squared (ie, Mahalanobis distance) and
+    # Return normalised innovation squared (Mahalanobis distance) and
     # normalised distance
     zp, H = predict_observation(x, idf)
     v = z - zp
