@@ -6,8 +6,10 @@ function make_landmarks(nlandmarks::Int, boundaries, margin)
 end
 
 
+"""
+Return indices of landmarks within sensor acceptance (r < rmax, phi < +/)
+"""
 function nearby_landmark_indices(pose, lm, rmax)
-    # Return indices of landmarks within sensor acceptance
     dx = lm[1,:] - pose[1]
     dy = lm[2,:] - pose[2]
     phi = pose[3]
@@ -22,15 +24,15 @@ function nearby_landmark_indices(pose, lm, rmax)
             end
         end
     end
-    inearby
+    return inearby
 end
+
 
 """
 Add Gaussian noise to nominal control values
 Noise is taken to be uncorrelated (assume diagonal control_cov)
 """
 function add_control_noise!(vehicle::Vehicle, control_cov::AbstractMatrix)
-
     vehicle.measured_speed = vehicle.target_speed + randn(1)[1]*sqrt(control_cov[1,1])
     vehicle.measured_gamma = vehicle.target_gamma + randn(1)[1]*sqrt(control_cov[2,2])
 end
@@ -44,13 +46,6 @@ function add_control_noise(speed, gamma, control_cov)
 end
 
 
-function add_observation_noise(z, R)
-    # Add Gaussian noise to observation vector z
-    ncols = size(z, 2)
-    [z[1,:] + randn(1, ncols)*sqrt(R[1,1])
-     z[2,:] + randn(1, ncols)*sqrt(R[2,2])]
-end
-
 """
 Return array with columns z = [range; angle] for all nearby landmark
 observations as well as the corresponding list of landmark IDs.
@@ -61,12 +56,20 @@ function get_observations(vehicle::Vehicle, scene::Scene, R)
 
     inearby = nearby_landmark_indices(vehicle.pose, lm, vehicle.sensor_range)
 
+    dx  = lm[1, inearby] - x
+    dy  = lm[2, inearby] - y
+
+    # 2 by nz observation matrix - columns are range and bearing
+    z = [sqrt(dx.^2 + dy.^2) atan2(dy, dx) - phi]'
+
+    # Add Gaussian noise to z to simulate measurement resolution
+    ncols = size(z, 2)
+    if ncols > 0
+        z = z + [randn(1, ncols)*sqrt(R[1,1]); randn(1, ncols)*sqrt(R[2,2])]
+    end
+
     # Unique identifier for each landmark
     landmark_tags = 1:size(lm, 2)
 
-    dx  = lm[1,inearby] - x
-    dy  = lm[2,inearby] - y
-
-    z = add_observation_noise([sqrt(dx.^2 + dy.^2); atan2(dy, dx) - phi], R)
-    z, landmark_tags[inearby]
+    return z, landmark_tags[inearby]
 end
