@@ -4,29 +4,30 @@ module SLAM
 
 export
     # Types
-    Scene,
-    SlamState,
     EKFSlamState,
+    Scene,
+    SimData,
+    SlamState,
     PFSlamState,
     Vehicle,
-    SimData,
 
     # Functions
-    get_waypoints,
-    initial_pose,
-    mpi_to_pi,
-    frame_transform,
-    step_vehicle!,
-    steer!,
-    predict,
-    update,
     add_features,
     associate,
     compute_association,
-    predict_observation,
-    ellipse,
     compute_landmark_ellipses,
-    laser_lines
+    ellipse,
+    local_to_global,
+    get_waypoints,
+    inbounds,
+    initial_pose,
+    laser_lines,
+    mpi_to_pi,
+    predict,
+    predict_observation,
+    steer!,
+    step_vehicle!,
+    update
 
 
 include("common.jl")

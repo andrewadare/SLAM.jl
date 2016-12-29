@@ -70,11 +70,20 @@ end
 ## Functions ##
 
 """
+Returns true if (x,y) falls within scene.boundaries
+"""
+function inbounds(x::Real, y::Real, scene::Scene)
+    # Scene boundaries: xmin, xmax, ymin, ymax
+    xmin, xmax, ymin, ymax = scene.boundaries
+    return xmin <= x <= xmax && ymin <= y <= ymax
+end
+
+"""
 Read x,y positions from 2-column text file and return as 2 x N array
 """
 function get_waypoints(txtfile::AbstractString)
     wp, _ = readdlm(txtfile, header=true)
-    wp = wp'
+    return wp'
 end
 
 
@@ -83,9 +92,7 @@ Initial [x, y, phi] at first waypoint, heading for second waypoint
 """
 function initial_pose(scene::Scene)
     wp = scene.waypoints
-    [wp[1,1];
-     wp[2,1];
-     atan2(wp[2,2] - wp[2,1], wp[1,2] - wp[1,1])]
+    return [wp[1,1]; wp[2,1]; atan2(wp[2,2] - wp[2,1], wp[1,2] - wp[1,1])]
 end
 
 
@@ -99,28 +106,29 @@ function mpi_to_pi(phi::AbstractFloat)
     if phi < -pi
         return phi + 2*pi
     end
-    phi
+    return phi
 end
 
 
 """
-Return a rotated and translated pose given the pose l in a local frame and the
-pose g in the global frame. l and g should be vectors whose first three elements
-are x, y, and phi.
+Given a 2-by-n or 3-by-n matrix `l` whose columns are positions (x,y) or
+poses (x,y,phi) in the local vehicle coordinate system, and a vehicle pose `g`
+in the global coordinate system, return `l` transformed to global coordinates.
 """
-function frame_transform(l, g)
+function local_to_global(l, g)
 
     q = zeros(l)
+    phi = g[3]
 
     # Rotate and translate
-    R = [cos(g[3]) -sin(g[3]); sin(g[3]) cos(g[3])]
+    R = [cos(phi) -sin(phi); sin(phi) cos(phi)]
     q[1:2,:] = R*l[1:2,:] .+ g[1:2]
 
-    # if l is a pose and not a point
+    # if l is a pose (includes an azimuthal angle)
     if size(l,1)==3
-        q[3,:] = mpi_to_pi(l[3,:] + g[3])
+        q[3,:] = mpi_to_pi(l[3,:] .+ phi)
     end
-    q
+    return q
 end
 
 
@@ -153,7 +161,7 @@ function predict_observation(x::AbstractVector, idf::Int)
     H[:,1:3]         = [-xd -yd 0; yd2 -xd2 -1]
     H[:,fpos:fpos+1] = [ xd  yd;  -yd2  xd2]
 
-    z, H
+    return z, H
 end
 
 
@@ -221,6 +229,7 @@ function steer!(vehicle::Vehicle, waypoints::AbstractArray, d_min::AbstractFloat
     return
 end
 
+
 """
 Make a single 2D n-sigma Gaussian contour centered at x with axes given
 by covariance matrix P
@@ -230,7 +239,7 @@ function ellipse(x, P, nsigma, nsegs)
     # Approximate smooth ellipse with nsegs line segments (nsegs + 1 points)
     phi = 0:2*pi/nsegs:2*pi
 
-    nsigma*sqrtm(P)*[cos(phi)'; sin(phi)'] .+ x[1:2]
+    return nsigma*sqrtm(P)*[cos(phi)'; sin(phi)'] .+ x[1:2]
 end
 
 
@@ -249,18 +258,26 @@ function compute_landmark_ellipses(x, P)
 
         ellipses[2i-1:2i, :] = ellipse(x[j], P[j,j], nsigma, nsegs)
     end
-    ellipses
+    return ellipses
 end
 
+
 """
-Return array of line segments for laser range-bearing measurements.
-Columns contain vehicle and feature positions [vx; vy; fx; fy]
+Return matrix of line segments for laser range-bearing measurements.
+Each column contains vehicle and feature positions: [vx vy fx fy]'
 """
-function laser_lines(z, x)
+function laser_lines(z, vehicle_pose)
     nlines = size(z, 2)
     lines = Array{Float64}(4, nlines)
-    lines[1,:] = zeros(1, nlines) + x[1]
-    lines[2,:] = zeros(1, nlines) + x[2]
-    lines[3:4,:] = frame_transform([z[1,:].*cos(z[2,:]); z[1,:].*sin(z[2,:])], x)
-    lines
+    lines[1,:] = zeros(1, nlines) .+ vehicle_pose[1]
+    lines[2,:] = zeros(1, nlines) .+ vehicle_pose[2]
+
+    # Range and bearing from vehicle to observations
+    r, b = z[1,:], z[2,:]
+
+    # x,y position of observations in local (vehicle) coordinate frame
+    xy_local = [r.*cos(b) r.*sin(b)]'
+
+    lines[3:4,:] = local_to_global(xy_local, vehicle_pose)
+    return lines
 end

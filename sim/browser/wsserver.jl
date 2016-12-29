@@ -39,6 +39,14 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
     # Send line endpoints for lidar beams from vehicle to observed feature
     if simdata.state_updated && simdata.nz > 0
         lines = laser_lines(simdata.z[:,1:simdata.nz], simdata.state.x[1:3])
+
+        nlines = size(lines, 2)
+        for j = 1:nlines
+            vx, vy, zx, zy = lines[1:4, j]
+            @assert inbounds(vx, vy, simdata.scene) "vx, vy: $vx $vy"
+            @assert inbounds(zx, zy, simdata.scene) "zx, zy: $zx $zy"
+        end
+
         send_json("lidar", dict_array(lines, ["x1", "y1", "x2", "y2"]), client)
 
         # Write feature uncertainty ellipses
