@@ -3,7 +3,7 @@ import GR
 
 function draw_scene(scene::Scene, state::EKFSlamState, vehicle::Vehicle)
     draw_map(scene.landmarks, scene.waypoints)
-    draw_vehicle(frame_transform(vehicle.shape, vehicle.pose))
+    draw_vehicle(local_to_global(vehicle.shape, vehicle.pose))
     if scene.nsteps > 1
         draw_true_path(scene.true_track, scene.nsteps)
         draw_slam_path(scene.slam_track, scene.nsteps)
