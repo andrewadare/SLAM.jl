@@ -1,3 +1,46 @@
+
+function sim_setup(n_landmarks::Integer,
+                   waypoints_file::AbstractString,
+                   state::SlamState)
+
+    # Scene boundaries: xmin, xmax, ymin, ymax
+    boundaries = [0.; 100; 0; 100]
+    scene = Scene(boundaries,
+                  get_waypoints(waypoints_file),
+                  make_landmarks(n_landmarks, boundaries, 0.05),
+                  Array{Float64}(3, 10000),
+                  Array{Float64}(3, 10000),
+                  0)
+
+    simdata = SimData(zeros(2, n_landmarks), 0, false, false, 2)
+
+    return scene, simdata
+end
+
+
+# This method runs the simulation without monitoring
+# function sim!(simdata::SimData,
+#               scene::Scene,
+#               vehicle::Vehicle,
+#               state::SlamState)
+#     sim!(simdata, scene, vehicle, state, (x...) -> (), [])
+# end
+
+
+function default_vehicle()
+    v = Vehicle()
+    v.wheelbase = 4.0            # [m]
+    v.max_gamma = 60*pi/180      # [rad] max steering angle (-max < g < max)
+    v.steer_rate = 60*pi/180     # [rad/s] max rate of change in steer angle
+    v.sensor_range = 30          # [m] Landmark detection radius
+    v.shape = [1. -1 -1; 0 1 -1] # A little triangle for visualization
+    # v.pose = initial_pose(scene)
+    v.target_speed = 8           # [m/s]
+    v.waypoint_id = 1            # Initialize to index of first waypoint
+    return v
+end
+
+
 function make_landmarks(nlandmarks::Int, boundaries, margin)
     xmin, xmax, ymin, ymax = boundaries
     bx = margin*(xmax - xmin)

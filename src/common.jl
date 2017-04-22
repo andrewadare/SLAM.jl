@@ -57,9 +57,6 @@ end
 Vehicle() = Vehicle(0., 0., 0., 0., zeros(2,0), zeros(3), 0., 0., 0., 0., 0)
 
 type SimData{T<:Real}
-    scene::Scene{T}
-    vehicle::Vehicle{T}
-    state::SlamState
     z::Matrix{T}             # Recent [range, bearing] feature observations
     nz::Int                  # Current number of observations
     state_updated::Bool      # If SLAM state occured in this step

@@ -1,61 +1,10 @@
-# SLAM simulation using extended Kalman filter. Inspired by Matlab implementation
-# by T. Bailey et al (https://openslam.org/bailey-slam.html).
 
-# Here are three options to make the SLAM module (or any other) available to your code:
-#
-# 1. Include it directly: `include("path/to/SLAM.jl/src/SLAM.jl")`
-# 2. Add it to Julia's LOAD_PATH environment variable: if `module_dir = "/path/to/SLAM.jl"`,
-#    add a line like `module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)` to your code,
-#    your REPL session, or to `~/.juliarc.jl`.
-# 3. Use SLAM.jl as a package: Pkg.clone("url/to/SLAM.jl")
-include("../src/SLAM.jl")
-
-using SLAM
-
-include("sim-utils.jl")
-
-function ekfsim_setup(n_landmarks::Integer, waypoints_file::AbstractString)
-
-    # Scene boundaries: xmin, xmax, ymin, ymax
-    boundaries = [0.; 100; 0; 100]
-    scene = Scene(boundaries,
-                  get_waypoints(waypoints_file),
-                  make_landmarks(n_landmarks, boundaries, 0.05),
-                  Array{Float64}(3, 10000),
-                  Array{Float64}(3, 10000),
-                  0)
-
-    # Vehicle
-    vehicle = Vehicle()
-    vehicle.wheelbase = 4.0            # [m]
-    vehicle.max_gamma = 60*pi/180      # [rad] max steering angle (-max < g < max)
-    vehicle.steer_rate = 60*pi/180     # [rad/s] max rate of change in steer angle
-    vehicle.sensor_range = 30          # [m] Landmark detection radius
-    vehicle.shape = [1. -1 -1; 0 1 -1] # A little triangle for visualization
-    vehicle.pose = initial_pose(scene)
-    vehicle.target_speed = 8           # [m/s]
-    vehicle.waypoint_id = 1            # Initialize to index of first waypoint
-
-    # SLAM state vector
-    # First three elements comprise the SLAM vehicle pose; state is augmented as
-    # new landmarks are observed. Covariance matrix is also augmented during simulation.
-    state = EKFSlamState(vehicle.pose, zeros(3, 3))
-
-    SimData(scene, vehicle, state, zeros(2, n_landmarks), 0, false, false, 2)
-end
-
-
-# This method runs the simulation without monitoring
-function sim!(simdata::SimData)
-    sim!(simdata::SimData, (x...) -> (), [])
-end
-
-
-function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
-
-    # Use "typedefs" for simdata fields to shorten names.
-    # Since these are references, the simdata object is modified in place.
-    scene, vehicle, state = simdata.scene, simdata.vehicle, simdata.state
+function sim!(simdata::SimData,
+              scene::Scene,
+              vehicle::Vehicle,
+              state::EKFSlamState,
+              monitor::Function,
+              monitor_args::AbstractVector)
 
     n_landmarks = size(scene.landmarks, 2)
 
@@ -127,7 +76,7 @@ function sim!(simdata::SimData, monitor::Function, args::AbstractVector)
         scene.true_track[:, scene.nsteps] = vehicle.pose
         scene.slam_track[:, scene.nsteps] = state.x[1:3]
 
-        monitor(args...)
+        monitor(monitor_args...)
 
         # Limit frame rate for realistic timing
         marker = time()

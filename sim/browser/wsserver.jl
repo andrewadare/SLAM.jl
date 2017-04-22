@@ -1,16 +1,34 @@
+# SLAM simulation using extended Kalman filter. Inspired by Matlab implementation
+# by T. Bailey et al (https://openslam.org/bailey-slam.html).
+
 using HttpServer
 using WebSockets
 import JSON
 
+# Here are three options to make the SLAM module (or any other) available to your code:
+#
+# 1. Include it directly: `include("path/to/SLAM.jl/src/SLAM.jl")`
+# 2. Add it to Julia's LOAD_PATH environment variable: if `module_dir = "/path/to/SLAM.jl"`,
+#    add a line like `module_dir in LOAD_PATH || push!(LOAD_PATH, module_dir)` to your code,
+#    your REPL session, or to `~/.juliarc.jl`.
+# 3. Use SLAM.jl as a package: Pkg.clone("url/to/SLAM.jl")
+include("../../src/SLAM.jl")
+
+using SLAM
+
+include("../sim-utils.jl")
 include("../ekfslam-sim.jl")
+# include("../fastslam-sim.jl")
 
-# Global object containing simulation state, updated in real time.
-# It is exposed for monitoring, debugging, and flexible visualization.
-simdata = ekfsim_setup(10, "../course1.txt")
-
-function start(simdata::SimData, monitor::Function, client::WebSockets.WebSocket)
+function start(simdata::SimData,
+               scene::Scene,
+               vehicle::Vehicle,
+               state::SlamState,
+               monitor::Function,
+               client::WebSockets.WebSocket)
     simdata.paused = false
-    @async sim!(simdata, monitor, [simdata, client])
+    @async sim!(simdata, scene, vehicle, state, monitor,
+        [simdata, scene, vehicle, state, client])
 end
 
 
@@ -19,11 +37,15 @@ Callback passed to simulation providing access to simulation state during
 runtime. This method writes messages to a WebSocket client for browser
 visualization.
 """
-function monitor(simdata::SimData, client::WebSockets.WebSocket)
+function monitor(simdata::SimData,
+                 scene::Scene,
+                 vehicle::Vehicle,
+                 state::SlamState,
+                 client::WebSockets.WebSocket)
 
-    n = simdata.scene.nsteps
-    tt, st = simdata.scene.true_track, simdata.scene.slam_track
-    pose = simdata.state.x[1:3]
+    n = scene.nsteps
+    tt, st = scene.true_track, scene.slam_track
+    pose = state.x[1:3]
 
     # The 5 parameters for a rotated covariance ellipse
 
@@ -33,25 +55,25 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
     send_json("tracks", d, client)
 
     # Send SLAM state
-    d = Dict("pose" => pose, "cov" => simdata.state.cov)
+    d = Dict("pose" => pose, "cov" => state.cov)
     send_json("state", d, client)
 
     # Send line endpoints for lidar beams from vehicle to observed feature
     if simdata.state_updated && simdata.nz > 0
-        lines = laser_lines(simdata.z[:,1:simdata.nz], simdata.state.x[1:3])
+        lines = laser_lines(simdata.z[:,1:simdata.nz], state.x[1:3])
 
         nlines = size(lines, 2)
         for j = 1:nlines
             vx, vy, zx, zy = lines[1:4, j]
-            @assert inbounds(vx, vy, simdata.scene) "vx, vy: $vx $vy"
-            @assert inbounds(zx, zy, simdata.scene) "zx, zy: $zx $zy"
+            @assert inbounds(vx, vy, scene) "vx, vy: $vx $vy"
+            @assert inbounds(zx, zy, scene) "zx, zy: $zx $zy"
         end
 
         send_json("lidar", dict_array(lines, ["x1", "y1", "x2", "y2"]), client)
 
         # Write feature uncertainty ellipses
-        if length(simdata.state.x) > 3
-            ellipses = feature_ellipses(simdata.state.x, simdata.state.cov)
+        if length(state.x) > 3
+            ellipses = feature_ellipses(state.x, state.cov)
             ellipse_keys = ["cx", "cy", "rx", "ry", "phi"]
             send_json("feature-ellipses", dict_array(ellipses, ellipse_keys), client)
         end
@@ -59,7 +81,7 @@ function monitor(simdata::SimData, client::WebSockets.WebSocket)
 
     # Write uncertainty ellipse for vehicle position
     let
-        l,u = eig(simdata.state.cov[1:2, 1:2])
+        l,u = eig(state.cov[1:2, 1:2])
         vehicle_ellipse = [pose' sqrt(l)' atan2(u[2,1], u[1,1])]'
         ellipse_keys = ["cx", "cy", "vehicle_phi", "rx", "ry", "phi"]
         send_json("vehicle-ellipse", dict_array(vehicle_ellipse, ellipse_keys), client)
@@ -143,6 +165,23 @@ wsh = WebSocketHandler() do req, client
     println("    client.is_closed: ",  client.is_closed)
     println("    client.sent_close: ", client.sent_close)
 
+    # EKF SLAM state vector
+    # First three elements comprise the SLAM vehicle pose; state is augmented as
+    # new landmarks are observed. Covariance matrix is also augmented during simulation.
+    state = EKFSlamState(zeros(3), zeros(3, 3))
+
+    scene, simdata = sim_setup(10, "../course1.txt", state)
+
+    vehicle = default_vehicle()
+    vehicle.pose = initial_pose(scene)
+
+    # Global object containing simulation state, updated in real time.
+    # It is exposed for monitoring, debugging, and flexible visualization.
+
+    if typeof(state) == EKFSlamState
+        state.x = initial_pose(scene)
+    end
+
     while true
 
         # Read string from client, decode, and parse to Dict
@@ -150,24 +189,24 @@ wsh = WebSocketHandler() do req, client
 
         if haskey(msg, "text") && msg["text"] == "ready"
             println("Received update from client: ready")
-            send_json("waypoints", dict_array(simdata.scene.waypoints, ["x", "y"]), client)
-            send_json("landmarks", dict_array(simdata.scene.landmarks, ["x", "y"]), client)
+            send_json("waypoints", dict_array(scene.waypoints, ["x", "y"]), client)
+            send_json("landmarks", dict_array(scene.landmarks, ["x", "y"]), client)
         end
 
         if haskey(msg, "text") && msg["text"] == "start"
-            start(simdata, monitor, client)
+            start(simdata, scene, vehicle, state, monitor, client)
         end
 
         if haskey(msg, "text") && msg["text"] == "reset"
-            simdata.scene.nsteps = 0
-            simdata.scene.true_track *= 0
-            simdata.scene.slam_track *= 0
+            scene.nsteps = 0
+            scene.true_track *= 0
+            scene.slam_track *= 0
 
-            simdata.state.x = initial_pose(simdata.scene)
-            simdata.state.cov = zeros(3, 3)
+            state.x = initial_pose(scene)
+            state.cov = zeros(3, 3)
 
-            simdata.vehicle.waypoint_id = 1
-            simdata.vehicle.pose = initial_pose(simdata.scene)
+            vehicle.waypoint_id = 1
+            vehicle.pose = initial_pose(scene)
 
             simdata.state_updated = false
             simdata.paused = false
@@ -176,7 +215,7 @@ wsh = WebSocketHandler() do req, client
         if haskey(msg, "text") && msg["text"] == "pause"
             simdata.paused = !simdata.paused
             if !simdata.paused
-                start(simdata, monitor, client)
+                start(simdata, scene, vehicle, state, monitor, client)
             end
         end
 
