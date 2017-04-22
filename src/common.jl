@@ -14,9 +14,9 @@ end
 type Particle{T<:Real}
     pose::Vector{T}                    # Inferred vehicle pose e.g. [x, y, phi]
     features::Matrix{T}                # Feature positions (as columns)
-
     pcov::Matrix{T}                    # Covariance matrices 3 x 3 x nparticles
     fcov::Matrix{T}                    # Feature/landmark cov matrix
+    weight::T
 end
 
 abstract SlamState
