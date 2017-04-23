@@ -1,7 +1,5 @@
 
-function sim_setup(n_landmarks::Integer,
-                   waypoints_file::AbstractString,
-                   state::SlamState)
+function sim_setup(n_landmarks::Integer, waypoints_file::AbstractString)
 
     # Scene boundaries: xmin, xmax, ymin, ymax
     boundaries = [0.; 100; 0; 100]

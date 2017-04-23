@@ -13,10 +13,10 @@ end
 
 type Particle{T<:Real}
     pose::Vector{T}                    # Inferred vehicle pose e.g. [x, y, phi]
-    features::Matrix{T}                # Feature positions (as columns)
-    pcov::Matrix{T}                    # Covariance matrices 3 x 3 x nparticles
-    fcov::Matrix{T}                    # Feature/landmark cov matrix
-    weight::T
+    pcov::Matrix{T}                    # Pose covariance matrix
+    features::Vector{Vector{T}}        # Feature positions
+    fcovs::Vector{Matrix{T}}           # Feature/landmark covariance matrices
+    weight::T                          # Weight factor for this particle
 end
 
 abstract SlamState
@@ -29,8 +29,36 @@ end
 
 # Particle Filter SLAM state
 type PFSlamState{T<:Real} <: SlamState
+    x::Vector{T}
+    cov::Matrix{T}
     n::Int
     particles::Vector{Particle{T}}
+end
+
+# PFSlamState Constructor
+function PFSlamState{T}(n::Int, initial_pose::Vector{T})
+    particles = Vector{Particle{T}}(0)
+    pose_ndof = length(initial_pose)
+    cov = zeros(T, pose_ndof, pose_ndof)
+
+    for i = 1:n
+
+        # Vehicle pose and covariance
+        pose = initial_pose
+        pcov = zeros(T, pose_ndof, pose_ndof)
+
+        # Feature/landmark positions and covariances
+        features = Vector{Vector{T}}(0)
+        fcovs = Vector{Matrix{T}}(0)
+
+        # Initial weighting
+        weight = 1.0/n
+
+        p = Particle(pose, pcov, features, fcovs, weight)
+        push!(particles, p)
+    end
+
+    return PFSlamState(initial_pose, cov, n, particles)
 end
 
 type Vehicle{T<:Real}
@@ -64,7 +92,36 @@ type SimData{T<:Real}
     nlaps::Int               # Number of loops through the waypoint list
 end
 
+
 ## Functions ##
+
+
+"""
+Reset EKFSlamState to initial configuration
+"""
+function reset!{T}(state::EKFSlamState{T})
+    state.x = zeros(T, 3)
+    state.cov = zeros(T, 3, 3)
+end
+
+
+"""
+Reset PFSlamState to initial configuration
+"""
+function reset!{T}(state::PFSlamState{T})
+    for particle in state.particles
+        reset!(particle)
+    end
+end
+
+
+"""
+Reset Particle to initial configuration
+"""
+function reset!{T}(particle::Particle{T})
+    # TODO
+end
+
 
 """
 Returns true if (x,y) falls within scene.boundaries
@@ -74,6 +131,7 @@ function inbounds(x::Real, y::Real, scene::Scene)
     xmin, xmax, ymin, ymax = scene.boundaries
     return xmin <= x <= xmax && ymin <= y <= ymax
 end
+
 
 """
 Read x,y positions from 2-column text file and return as 2 x N array

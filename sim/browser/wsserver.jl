@@ -18,7 +18,7 @@ using SLAM
 
 include("../sim-utils.jl")
 include("../ekfslam-sim.jl")
-# include("../fastslam-sim.jl")
+include("../fastslam-sim.jl")
 
 function start(simdata::SimData,
                scene::Scene,
@@ -40,7 +40,66 @@ visualization.
 function monitor(simdata::SimData,
                  scene::Scene,
                  vehicle::Vehicle,
-                 state::SlamState,
+                 state::EKFSlamState,
+                 client::WebSockets.WebSocket)
+
+    n = scene.nsteps
+    tt, st = scene.true_track, scene.slam_track
+    pose = state.x[1:3]
+
+    # The 5 parameters for a rotated covariance ellipse
+
+    # Send latest pose information
+    d = Dict("ideal" => Dict("x" => tt[1, n], "y" => tt[2, n], "phi" => tt[3, n]),
+             "slam"  => Dict("x" => st[1, n], "y" => st[2, n], "phi" => st[3, n]))
+    send_json("tracks", d, client)
+
+    # Send SLAM state
+    d = Dict("pose" => pose, "cov" => state.cov)
+    send_json("state", d, client)
+
+    # Send line endpoints for lidar beams from vehicle to observed feature
+    if simdata.state_updated && simdata.nz > 0
+        lines = laser_lines(simdata.z[:,1:simdata.nz], state.x[1:3])
+
+        nlines = size(lines, 2)
+        for j = 1:nlines
+            vx, vy, zx, zy = lines[1:4, j]
+            @assert inbounds(vx, vy, scene) "vx, vy: $vx $vy"
+            @assert inbounds(zx, zy, scene) "zx, zy: $zx $zy"
+        end
+
+        send_json("lidar", dict_array(lines, ["x1", "y1", "x2", "y2"]), client)
+
+        # Write feature uncertainty ellipses
+        if length(state.x) > 3
+            ellipses = feature_ellipses(state.x, state.cov)
+            ellipse_keys = ["cx", "cy", "rx", "ry", "phi"]
+            send_json("feature-ellipses", dict_array(ellipses, ellipse_keys), client)
+        end
+    end
+
+    # Write uncertainty ellipse for vehicle position
+    let
+        l,u = eig(state.cov[1:2, 1:2])
+        vehicle_ellipse = [pose' sqrt(l)' atan2(u[2,1], u[1,1])]'
+        ellipse_keys = ["cx", "cy", "vehicle_phi", "rx", "ry", "phi"]
+        send_json("vehicle-ellipse", dict_array(vehicle_ellipse, ellipse_keys), client)
+    end
+
+    return
+end
+
+
+"""
+Callback passed to simulation providing access to simulation state during
+runtime. This method writes messages to a WebSocket client for browser
+visualization.
+"""
+function monitor(simdata::SimData,
+                 scene::Scene,
+                 vehicle::Vehicle,
+                 state::PFSlamState,
                  client::WebSockets.WebSocket)
 
     n = scene.nsteps
@@ -165,20 +224,22 @@ wsh = WebSocketHandler() do req, client
     println("    client.is_closed: ",  client.is_closed)
     println("    client.sent_close: ", client.sent_close)
 
+    # simdata contains simulation state, updated in real time.
+    # It is exposed for monitoring, debugging, and flexible visualization.
+    scene, simdata = sim_setup(10, "../course1.txt")
+
+    state = PFSlamState(100, initial_pose(scene))
+
     # EKF SLAM state vector
     # First three elements comprise the SLAM vehicle pose; state is augmented as
     # new landmarks are observed. Covariance matrix is also augmented during simulation.
-    state = EKFSlamState(zeros(3), zeros(3, 3))
-
-    scene, simdata = sim_setup(10, "../course1.txt", state)
+    # state = EKFSlamState{Float64}(zeros(3), zeros(3, 3))
 
     vehicle = default_vehicle()
     vehicle.pose = initial_pose(scene)
 
-    # Global object containing simulation state, updated in real time.
-    # It is exposed for monitoring, debugging, and flexible visualization.
-
-    if typeof(state) == EKFSlamState
+    # TODO improve this
+    if typeof(state) == EKFSlamState{Float64}
         state.x = initial_pose(scene)
     end
 
@@ -202,11 +263,16 @@ wsh = WebSocketHandler() do req, client
             scene.true_track *= 0
             scene.slam_track *= 0
 
-            state.x = initial_pose(scene)
-            state.cov = zeros(3, 3)
-
             vehicle.waypoint_id = 1
             vehicle.pose = initial_pose(scene)
+
+            # reset!(state)
+
+            # TODO improve this
+            if typeof(state) == EKFSlamState{Float64}
+                state.x = initial_pose(scene)
+                state.cov = zeros(3, 3)
+            end
 
             simdata.state_updated = false
             simdata.paused = false

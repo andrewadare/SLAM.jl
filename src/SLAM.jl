@@ -25,6 +25,7 @@ export
     mpi_to_pi,
     predict,
     predict_observation,
+    reset!,
     steer!,
     step_vehicle!,
     update
