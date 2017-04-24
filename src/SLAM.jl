@@ -23,7 +23,7 @@ export
     initial_pose,
     laser_lines,
     mpi_to_pi,
-    predict,
+    predict_pose,
     predict_observation,
     reset!,
     steer!,
@@ -33,6 +33,7 @@ export
 
 include("common.jl")
 include("ekf.jl")
+include("fastslam.jl")
 include("data-association.jl")
 
 end # SLAM

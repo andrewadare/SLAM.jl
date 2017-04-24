@@ -5,41 +5,22 @@ Predict SLAM pose and covariance matrix according to equations of motion for veh
 Q is the covariance matrix for speed and steering angle gamma.
 dt is the timestep
 """
-function predict(state::EKFSlamState, vehicle::Vehicle, Q::AbstractMatrix, dt::AbstractFloat)
+function predict_pose(state::EKFSlamState, vehicle::Vehicle, Q::AbstractMatrix, dt::AbstractFloat)
 
     x = state.x
     P = state.cov
-    phi = x[3]
 
-    g = vehicle.measured_gamma
-    v = vehicle.measured_speed
-    w = vehicle.wheelbase
+    # Predicted pose and covariance, as well as Jacobian matrices
+    xpred, cov_pred, Gu, Gv = predict_pose(x[1:3], P[1:3, 1:3], vehicle, Q, dt)
 
-    s = sin(g + phi)
-    c = cos(g + phi)
-    vts = v*dt*s
-    vtc = v*dt*c
+    x[1:3], P[1:3,1:3] = xpred, cov_pred
 
-    # Jacobians
-    Gv = [1 0 -vts;
-          0 1 vtc;
-          0 0 1]
-    Gu = [dt*c -vts;
-          dt*s  vtc;
-          dt*sin(g)/w v*dt*cos(g)/w]
-
-    # Predict covariance
-    P[1:3,1:3] = Gv*P[1:3,1:3]*Gv' + Gu*Q*Gu'
     if size(P, 1) > 3
         P[1:3,4:end] = Gv*P[1:3,4:end]
         P[4:end,1:3] = P[1:3,4:end]'
     end
 
-    # Predict pose
-    x[1:3] = [x[1] + vtc;
-              x[2] + vts;
-              mpi_to_pi(phi + v*dt*sin(g)/w)]
-    x, P
+    return x, P
 end
 
 
@@ -52,6 +33,7 @@ function update(state::EKFSlamState, z, R, idf)
     H = zeros(2*lenz, lenx)
     v = zeros(2*lenz)
     RR = zeros(2*lenz, 2*lenz)
+
     for i = 1:lenz
         ii = 2*i + (-1:0)
         zp, H[ii,:] = predict_observation(x, idf[i])
@@ -60,20 +42,9 @@ function update(state::EKFSlamState, z, R, idf)
         RR[ii,ii] = R
     end
 
-    # Calculate the KF (or EKF) update given the prior state [x,P]
-    # the innovation [v,RR] and the (linearised) observation model H.
-    # The result is calculated using Cholesky factorisation, which
-    # is more numerically stable than a naive implementation.
-    PHt = P*H'
-    S = H*PHt + RR
-    S = (S + S')*0.5 # make symmetric
-    C = inv(chol(S)) # triangular matrix
-    W1 = PHt*C
-    W = W1*C'
+    x, P = kalman_cholesky_update(x, P, v, RR, H)
 
-    x += W*v
-    P -= W1*W1'
-    x, P
+    return x, P
 end
 
 

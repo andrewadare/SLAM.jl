@@ -46,7 +46,7 @@ function sim!(simdata::SimData,
         add_control_noise!(vehicle, Q)
 
         # Prediction update for state vector and covariance
-        state.x, state.cov = predict(state, vehicle, Q, dt)
+        state.x, state.cov = predict_pose(state, vehicle, Q, dt)
 
         dtsum += dt
 

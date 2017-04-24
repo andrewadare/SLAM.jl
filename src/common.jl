@@ -31,17 +31,17 @@ end
 type PFSlamState{T<:Real} <: SlamState
     x::Vector{T}
     cov::Matrix{T}
-    n::Int
+    nparticles::Int
     particles::Vector{Particle{T}}
 end
 
 # PFSlamState Constructor
-function PFSlamState{T}(n::Int, initial_pose::Vector{T})
+function PFSlamState{T}(nparticles::Int, initial_pose::Vector{T})
     particles = Vector{Particle{T}}(0)
     pose_ndof = length(initial_pose)
     cov = zeros(T, pose_ndof, pose_ndof)
 
-    for i = 1:n
+    for i = 1:nparticles
 
         # Vehicle pose and covariance
         pose = initial_pose
@@ -52,13 +52,13 @@ function PFSlamState{T}(n::Int, initial_pose::Vector{T})
         fcovs = Vector{Matrix{T}}(0)
 
         # Initial weighting
-        weight = 1.0/n
+        weight = 1.0/nparticles
 
         p = Particle(pose, pcov, features, fcovs, weight)
         push!(particles, p)
     end
 
-    return PFSlamState(initial_pose, cov, n, particles)
+    return PFSlamState(initial_pose, cov, nparticles, particles)
 end
 
 type Vehicle{T<:Real}
@@ -164,6 +164,27 @@ function mpi_to_pi(phi::AbstractFloat)
     return phi
 end
 
+"""
+Calculate the Kalman update given the prior state [x,P], the innovation
+[v,R] and the linear observation model H.
+
+The result is calculated using Cholesky factorisation, which is more
+numerically stable than a naive implementation.
+"""
+function kalman_cholesky_update(x, P, v, R, H)
+    PHt = P*H'
+    S = H*PHt + R
+    S = (S + S')*0.5 # make symmetric
+    C = inv(chol(S)) # triangular matrix
+    W1 = PHt*C
+    W = W1*C'
+
+    x_new = x + W*v
+    P_new = P - W1*W1'
+
+    return x_new, P_new
+end
+
 
 """
 Given a 2-by-n or 3-by-n matrix `l` whose columns are positions (x,y) or
@@ -184,6 +205,47 @@ function local_to_global(l, g)
         q[3,:] = mpi_to_pi(l[3,:] .+ phi)
     end
     return q
+end
+
+
+"""
+Predict SLAM pose and covariance matrix according to equations of motion for vehicle.
+Q is the covariance matrix for speed and steering angle gamma.
+dt is the timestep
+"""
+function predict_pose{T<:Number}(x::Vector{T},
+                                 P::Matrix{T},
+                                 vehicle::Vehicle,
+                                 Q::AbstractMatrix,
+                                 dt::AbstractFloat)
+    phi = x[3]
+
+    g = vehicle.measured_gamma
+    v = vehicle.measured_speed
+    w = vehicle.wheelbase
+
+    s = sin(g + phi)
+    c = cos(g + phi)
+    vts = v*dt*s
+    vtc = v*dt*c
+
+    # Jacobians
+    Gv = [1 0 -vts;
+          0 1 vtc;
+          0 0 1]
+    Gu = [dt*c -vts;
+          dt*s  vtc;
+          dt*sin(g)/w v*dt*cos(g)/w]
+
+    # Predict pose
+    new_x = [x[1] + vtc;
+             x[2] + vts;
+             mpi_to_pi(phi + v*dt*sin(g)/w)]
+
+    # Predict covariance
+    new_P = Gv*P*Gv' + Gu*Q*Gu'
+
+   return new_x, new_P, Gu, Gv
 end
 
 

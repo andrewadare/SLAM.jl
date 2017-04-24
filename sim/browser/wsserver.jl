@@ -228,12 +228,12 @@ wsh = WebSocketHandler() do req, client
     # It is exposed for monitoring, debugging, and flexible visualization.
     scene, simdata = sim_setup(10, "../course1.txt")
 
-    state = PFSlamState(100, initial_pose(scene))
+    # state = PFSlamState(100, initial_pose(scene))
 
     # EKF SLAM state vector
     # First three elements comprise the SLAM vehicle pose; state is augmented as
     # new landmarks are observed. Covariance matrix is also augmented during simulation.
-    # state = EKFSlamState{Float64}(zeros(3), zeros(3, 3))
+    state = EKFSlamState{Float64}(zeros(3), zeros(3, 3))
 
     vehicle = default_vehicle()
     vehicle.pose = initial_pose(scene)

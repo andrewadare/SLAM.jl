@@ -45,8 +45,10 @@ function sim!(simdata::SimData,
         # Simulate imprecision about control target speed and steering angle
         add_control_noise!(vehicle, Q)
 
-        # Prediction update for state vector and covariance
-        # state.x, state.cov = predict(state, vehicle, Q, dt)
+        # Predict new state and covariance of each particle from motion model
+        for (i,p) in enumerate(state.particles)
+            p.pose, p.pcov, _, _ = predict_pose(p.pose, p.pcov, vehicle, Q, dt)
+        end
 
         dtsum += dt
 
