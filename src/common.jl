@@ -182,7 +182,7 @@ function kalman_cholesky_update(x, P, v, R, H)
     x_new = x + W*v
     P_new = P - W1*W1'
 
-    return x_new, P_new
+    return x_new[:], P_new  # Make x_new size (3,) vs. (3,1)
 end
 
 

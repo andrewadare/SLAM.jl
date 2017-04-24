@@ -30,7 +30,11 @@ function update(state::EKFSlamState, z, R, idf)
 
     lenz = size(z,2)
     lenx = length(x)
+
+    # Observation model
     H = zeros(2*lenz, lenx)
+
+    # Innovation vector and covariance
     v = zeros(2*lenz)
     RR = zeros(2*lenz, 2*lenz)
 

@@ -48,6 +48,11 @@ function sim!(simdata::SimData,
         # Predict new state and covariance of each particle from motion model
         for (i,p) in enumerate(state.particles)
             p.pose, p.pcov, _, _ = predict_pose(p.pose, p.pcov, vehicle, Q, dt)
+
+            # Simulate an IMU heading measurement with 2 degree uncertainty
+            sigma_phi = 2*pi/180
+            phi_imu = vehicle.pose[3] + sigma_phi*randn()
+            p.pose, p.pcov = fuse_heading_measurement(p.pose, p.pcov, phi_imu, sigma_phi)
         end
 
         dtsum += dt
@@ -62,7 +67,7 @@ function sim!(simdata::SimData,
             # Last two parameters are thresholds (Mahalanobis distances)
             # 4.0  [m] max distance for association
             # 25.0 [m] min distance for creation of new feature
-            # zf, idf, zn = associate(state, simdata.z, R, 4.0, 25.0)
+            zf, idf, zn = associate(state, simdata.z, R, 4.0, 25.0)
 
             # Update SLAM state
             # state.x, state.cov = update(state, zf, R, idf)

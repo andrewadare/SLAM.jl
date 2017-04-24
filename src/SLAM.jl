@@ -17,6 +17,7 @@ export
     compute_association,
     compute_landmark_ellipses,
     ellipse,
+    fuse_heading_measurement,
     local_to_global,
     get_waypoints,
     inbounds,
