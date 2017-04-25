@@ -14,6 +14,7 @@ export
     # Functions
     add_features,
     associate,
+    associate_known!,
     compute_association,
     compute_landmark_ellipses,
     ellipse,

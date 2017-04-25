@@ -1,5 +1,41 @@
+function associate_known!(z, tags, da_list, nf)
+    """
+    Parameters:
+
+    z: Observation array with columns = [range; angle]
+    tags: Identity of landmarks
+    da_list: data association list
+    nf: total number of features observed so far
+
+    Updates da_list in-place.
+    """
+    zf = Matrix{eltype(z)}(size(z, 1), 0)
+    zn = Matrix{eltype(z)}(size(z, 1), 0)
+    idf = Vector{eltype(tags)}(0)
+    idn = Vector{eltype(tags)}(0)
+
+    # Find associations (zf) and new features (zn)
+    for i = 1:length(tags)
+        ii = tags[i]
+
+        if da_list[ii] == 0
+            # Observed a new feature - append the measurement
+            zn = [zn z[:,i]]
+            idn = push!(idn, ii)
+        else
+            zf = [zf z[:,i]]
+            idf = push!(idf, da_list[ii])
+        end
+    end
+
+    # Add new feature IDs to data association list
+    da_list[idn] = nf + (1:size(zn, 2))
+
+    return zf, idf, zn
+end
+
+
 function associate(state::SlamState, z, R, gate1, gate2)
-    #
     # Simple gated nearest-neighbour data-association. No clever feature
     # caching tricks to speed up association, so computation is O(N), where
     # N is the number of features in the state.

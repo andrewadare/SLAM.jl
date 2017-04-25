@@ -93,12 +93,12 @@ observations as well as the corresponding list of landmark IDs.
 """
 function get_observations(vehicle::Vehicle, scene::Scene, R)
     lm = scene.landmarks
-    x,y,phi = vehicle.pose
+    x, y, phi = vehicle.pose
 
     inearby = nearby_landmark_indices(vehicle.pose, lm, vehicle.sensor_range)
 
-    dx  = lm[1, inearby] - x
-    dy  = lm[2, inearby] - y
+    dx = lm[1, inearby] - x
+    dy = lm[2, inearby] - y
 
     # 2 by nz observation matrix - columns are range and bearing
     z = [sqrt(dx.^2 + dy.^2) atan2(dy, dx) - phi]'

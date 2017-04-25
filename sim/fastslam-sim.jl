@@ -8,22 +8,27 @@ function sim!(simdata::SimData,
 
     n_landmarks = size(scene.landmarks, 2)
 
-    d_min = 1.0                        # [m] Once inside d_min, head for next waypoint
+    # Data association list for the known DA problem (fixed number of landmarks)
+    da_list = zeros(1, n_landmarks)
+
+    d_min = 1.0                  # [m] Once inside d_min, head for next waypoint
 
     # Simulated control noise covariance matrix
-    sigma_speed = 0.5                  # [m/s] Uncertainty about target speed
-    sigma_steer = (3.0*pi/180)         # [rad] Uncertainty about target gamma
-    Q = [sigma_speed^2 0; 0 sigma_steer^2]
+    sigma_speed = 0.5            # [m/s] Uncertainty about target speed
+    sigma_steer = (3.0*pi/180)   # [rad] Uncertainty about target gamma
+    Q = [sigma_speed^2 0;        # Process covariance matrix
+         0 sigma_steer^2]
 
     # Simulated observation noise covariance matrix
-    sigmaR = 0.1                       # [m] Range uncertainty
-    sigmaB = (1.0*pi/180)              # [rad] Bearing angle uncertainty
-    R = [sigmaR^2 0; 0 sigmaB^2]       # Obs. covariance matrix
+    sigmaR = 0.1                 # [m] Range uncertainty
+    sigmaB = (1.0*pi/180)        # [rad] Bearing angle uncertainty
+    R = [sigmaR^2 0;             # Obs. covariance matrix
+         0 sigmaB^2]
 
     # Timing variables
-    dt = 0.025                         # [s] Interval between control updates
-    dt_obs = 8*dt                      # [s] Interval between state updates
-    dtsum = 0                          # Time since last observation
+    dt = 0.025                   # [s] Interval between control updates
+    dt_obs = 8*dt                # [s] Interval between state updates
+    dtsum = 0                    # Time since last observation
     marker = time()
 
     while vehicle.waypoint_id != 0
@@ -50,6 +55,7 @@ function sim!(simdata::SimData,
             p.pose, p.pcov, _, _ = predict_pose(p.pose, p.pcov, vehicle, Q, dt)
 
             # Simulate an IMU heading measurement with 2 degree uncertainty
+            # and fuse it into the state estimate
             sigma_phi = 2*pi/180
             phi_imu = vehicle.pose[3] + sigma_phi*randn()
             p.pose, p.pcov = fuse_heading_measurement(p.pose, p.pcov, phi_imu, sigma_phi)
@@ -57,17 +63,26 @@ function sim!(simdata::SimData,
 
         dtsum += dt
 
-        # EKF update step - takes place every (dt_obs/dt) timesteps
+        # Update step - takes place every (dt_obs/dt) timesteps
         if dtsum > dt_obs
             dtsum = 0
             simdata.state_updated = true
             simdata.z, tags = get_observations(vehicle, scene, R)
             simdata.nz = size(simdata.z, 2)
 
-            # Last two parameters are thresholds (Mahalanobis distances)
-            # 4.0  [m] max distance for association
-            # 25.0 [m] min distance for creation of new feature
-            zf, idf, zn = associate(state, simdata.z, R, 4.0, 25.0)
+            # Number of features observed so far
+            nf = length(state.particles[1].features)
+
+            # Compute known data association
+            zf, idf, zn = associate_known!(simdata.z, tags, da_list, nf)
+
+            # Update estimate of existing features
+            if size(zf, 2) > 0
+            end
+
+            # Handle new features
+            if size(zn, 2) > 0
+            end
 
             # Update SLAM state
             # state.x, state.cov = update(state, zf, R, idf)
