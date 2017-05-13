@@ -209,6 +209,65 @@ end
 
 
 """
+Update pose and covariance with an externally supplied heading angle phi (e.g.
+from IMU or GPS) and its uncertainty sigma_phi.
+"""
+function fuse_heading_measurement{T}(x_prior::Vector{T},
+                                     cov_prior::Matrix{T},
+                                     phi::T,
+                                     sigma_phi::T)
+    phi_prior = x_prior[3]
+
+    # Measurement model
+    H = [0 0 1]
+
+    # Innovation
+    v = mpi_to_pi(phi - phi_prior)
+
+    x, P = kalman_cholesky_update(x_prior, cov_prior, v, sigma_phi^2, H)
+
+    return x, P
+end
+
+
+function jacobians{T}(particle::Particle{T}, known_feature_ids, R)
+    xv = particle.pose
+    xf = particle.features[:,known_feature_ids]
+    Pf = particle.fcovs[:,:,known_feature_ids]
+    phi = xv[3]
+
+    nf = length(known_feature_ids)
+
+    zp = Matrix{T}(2,nf)
+    Hv = Array{T}(2,3,nf)
+    Hf = Array{T}(2,2,nf)
+
+    for i = 1:nf
+        dx = xf[1,i] - xv[1]
+        dy = xf[2,i] - xv[2]
+        r2 = dx^2 + dy^2
+        r = sqrt(r2)
+
+        # predicted observation
+        zp[:,i] = [r; mpi_to_pi(atan2(dy, dx) - phi)]
+
+        # Jacobian wrt vehicle states
+        Hv[:,:,i] = [-dx/r  -dy/r  0;
+                     dy/r2 -dx/r2 -1]
+
+        # Jacobian wrt feature states
+        Hf[:,:,i] = [ dx/r   dy/r;
+                    -dy/r2  dx/r2]
+
+        # Innovation covariance of feature observation given the vehicle
+        Sf[:,:,i] = Hf[:,:,i] * Pf[:,:,i] * Hf[:,:,i]' + R
+    end
+
+    return zp, Hv, Hf, Sf
+end
+
+
+"""
 Predict SLAM pose and covariance matrix according to equations of motion for vehicle.
 Q is the covariance matrix for speed and steering angle gamma.
 dt is the timestep
