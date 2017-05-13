@@ -29,6 +29,7 @@ export
     predict_observation,
     reset!,
     steer!,
+    sample_proposal,
     step_vehicle!,
     update
 

@@ -79,6 +79,7 @@ function sim!(simdata::SimData,
             # Update estimate of existing features
             if size(zf, 2) > 0
                 for (i,p) in enumerate(state.particles)
+                    println("features: ", p.features, ", size(zf) = ", size(zf), ", nf = $nf")
                     x, P, w = sample_proposal(p, zf, tags, R)
                     # particles(i)= feature_update(particles(i), zf, idf, Re);
                 end
