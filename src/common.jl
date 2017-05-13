@@ -164,6 +164,7 @@ function mpi_to_pi(phi::AbstractFloat)
     return phi
 end
 
+
 """
 Calculate the Kalman update given the prior state [x,P], the innovation
 [v,R] and the linear observation model H.
@@ -187,6 +188,50 @@ end
 
 
 """
+Parameters:
+x: mean vector
+P: covariance matrix
+n: number of samples to collect
+"""
+function rand_mvn{T}(x::Vector{T}, P::Matrix{T}, n::Integer)
+    S = chol(P)'
+    X = randn(length(x), n)
+    return S*X + x*ones(1, n)
+end
+
+
+"""
+Evaluate multivariate normal distribution for a set of innovation vectors and
+their covariance matrix. Used for computing (log) likelihood values. For
+numerical stability, a Cholesky decomposition of the covariance matrix is used
+instead of a direct approach.
+
+Parameters:
+v: matrix whose columns are innovation vectors
+vcov: covariance matrix of v
+
+Returns:
+a vector of (log) Gaussian values.
+"""
+function eval_mvn{T}(v::Matrix{T}, vcov::Matrix{T}; eval_log=false)
+    d = size(v, 1)  # Dimensionality of each innovation vector
+    chol_cov = chol(vcov)'
+    v_normalized = chol_cov\v
+
+    # Compute vector of Gaussian exponential arguments (one entry for each
+    # innovation vector)
+    arg = -0.5*sum(v_normalized.^2, 1)
+
+    if eval_log
+        result = arg - 0.5*d*log(2pi) - sum(log(diag(chol_cov)))
+    else
+        result = exp(arg)/((2pi)^(d/2)*prod(diag(chol_cov)))
+    end
+    return result
+end
+
+
+"""
 Given a 2-by-n or 3-by-n matrix `l` whose columns are positions (x,y) or
 poses (x,y,phi) in the local vehicle coordinate system, and a vehicle pose `g`
 in the global coordinate system, return `l` transformed to global coordinates.
@@ -205,6 +250,38 @@ function local_to_global(l, g)
         q[3,:] = mpi_to_pi(l[3,:] .+ phi)
     end
     return q
+end
+
+
+function jacobians{T}(particle::Particle{T}, tags, R)
+    M = length(tags)
+    zp = Matrix{T}(2, M)
+    Hv = Array{T}(2, 3, M)
+    Hf = Array{T}(2, 2, M)
+    Sf = Array{T}(2, 2, M)
+
+    for i = 1:M
+        dx = particle.features[1, i] - particle.pose[1]
+        dy = particle.features[2, i] - particle.pose[2]
+        d2 = dx^2 + dy^2
+        d = sqrt(d2)
+
+        # Predicted observation
+        zp[:,i] = [d; mpi_to_pi(atan2(dy, dx) - particle.pose[3])]
+
+        # Jacobian matrix wrt particle state
+        Hv[:,:,i] = [-dx/d -dy/d   0;
+                     dy/d2 -dx/d2 -1]
+
+        # Jacobian wrt feature state
+        Hf[:,:,i] = [ dx/d   dy/d;
+                     -dy/d2 dx/d2]
+
+        # Innovation covariance of feature observation given the vehicle
+        Sf[:,:,i] = Hf[:,:,i] * Pf[:,:,i] * Hf[:,:,i]' + R
+    end
+
+    return zp, Hv, Hf, Sf
 end
 
 
