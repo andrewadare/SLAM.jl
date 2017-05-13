@@ -7,12 +7,17 @@ function associate_known!(z, tags, da_list, nf)
     da_list: data association list
     nf: total number of features observed so far
 
+    Returns:
+    zf: list of measurements corresponding to known features
+    idf: list of feature IDs corresponding to known features
+    zn: list of new measurements
+
     Updates da_list in-place.
     """
-    zf = Matrix{eltype(z)}(size(z, 1), 0)
-    zn = Matrix{eltype(z)}(size(z, 1), 0)
-    idf = Vector{eltype(tags)}(0)
-    idn = Vector{eltype(tags)}(0)
+    zf = Matrix{eltype(z)}(size(z, 1), 0)  # Already-seen feature positions
+    zn = Matrix{eltype(z)}(size(z, 1), 0)  # New feature positions
+    idf = Vector{eltype(tags)}(0)  # IDs of already-seen features
+    idn = Vector{eltype(tags)}(0)  # New feature IDs
 
     # Find associations (zf) and new features (zn)
     for i = 1:length(tags)
