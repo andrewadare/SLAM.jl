@@ -254,7 +254,9 @@ function local_to_global(l, g)
 end
 
 
-function jacobians{T, U<:Integer}(particle::Particle{T}, feature_ids::Vector{U}, R)
+function jacobians{T, U<:Integer}(particle::Particle{T},
+                                  feature_ids::Vector{U},
+                                  R::Matrix{T})
     M = length(feature_ids)
 
     @assert(size(particle.features, 2) >= M,
@@ -310,43 +312,6 @@ function fuse_heading_measurement{T}(x_prior::Vector{T},
 
     return x, P
 end
-
-
-# function jacobians{T}(particle::Particle{T}, known_feature_ids, R)
-#     xv = particle.pose
-#     xf = particle.features[:,known_feature_ids]
-#     Pf = particle.fcovs[:,:,known_feature_ids]
-#     phi = xv[3]
-
-#     nf = length(known_feature_ids)
-
-#     zp = Matrix{T}(2,nf)
-#     Hv = Array{T}(2,3,nf)
-#     Hf = Array{T}(2,2,nf)
-
-#     for i = 1:nf
-#         dx = xf[1,i] - xv[1]
-#         dy = xf[2,i] - xv[2]
-#         r2 = dx^2 + dy^2
-#         r = sqrt(r2)
-
-#         # predicted observation
-#         zp[:,i] = [r; mpi_to_pi(atan2(dy, dx) - phi)]
-
-#         # Jacobian wrt vehicle states
-#         Hv[:,:,i] = [-dx/r  -dy/r  0;
-#                      dy/r2 -dx/r2 -1]
-
-#         # Jacobian wrt feature states
-#         Hf[:,:,i] = [ dx/r   dy/r;
-#                     -dy/r2  dx/r2]
-
-#         # Innovation covariance of feature observation given the vehicle
-#         Sf[:,:,i] = Hf[:,:,i] * Pf[:,:,i] * Hf[:,:,i]' + R
-#     end
-
-#     return zp, Hv, Hf, Sf
-# end
 
 
 """
