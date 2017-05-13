@@ -78,17 +78,16 @@ function sim!(simdata::SimData,
 
             # Update estimate of existing features
             if size(zf, 2) > 0
+                for (i,p) in enumerate(state.particles)
+                    x, P, w = sample_proposal(p, zf, tags, R)
+                    # particles(i)= feature_update(particles(i), zf, idf, Re);
+                end
             end
 
             # Handle new features
             if size(zn, 2) > 0
             end
 
-            # Update SLAM state
-            # state.x, state.cov = update(state, zf, R, idf)
-
-            # Add z measurements to the SLAM state vector and its covariance
-            # state.x, state.cov = add_features(state, zn, R)
         else
             simdata.state_updated = false
         end
