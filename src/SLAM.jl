@@ -13,6 +13,7 @@ export
 
     # Functions
     add_features,
+    add_features!,
     associate,
     associate_known!,
     compute_association,
@@ -27,6 +28,7 @@ export
     mpi_to_pi,
     predict_pose,
     predict_observation,
+    rand_mvn,
     reset!,
     steer!,
     sample_proposal,

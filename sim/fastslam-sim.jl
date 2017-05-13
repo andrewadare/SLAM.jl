@@ -51,7 +51,7 @@ function sim!(simdata::SimData,
         add_control_noise!(vehicle, Q)
 
         # Predict new state and covariance of each particle from motion model
-        for (i,p) in enumerate(state.particles)
+        for (i, p) in enumerate(state.particles)
             p.pose, p.pcov, _, _ = predict_pose(p.pose, p.pcov, vehicle, Q, dt)
 
             # Simulate an IMU heading measurement with 2 degree uncertainty
@@ -78,15 +78,26 @@ function sim!(simdata::SimData,
 
             # Update estimate of existing features
             if size(zf, 2) > 0
-                for (i,p) in enumerate(state.particles)
+                for (i, p) in enumerate(state.particles)
                     println("features: ", p.features, ", size(zf) = ", size(zf), ", nf = $nf")
-                    x, P, w = sample_proposal(p, zf, tags, R)
-                    # particles(i)= feature_update(particles(i), zf, idf, Re);
+                    p.pose, p.pcov, p.weight = sample_proposal(p, zf, tags, R)
+
+                    # TODO: feature_update
                 end
+
+                # TODO: resample_particles
             end
 
             # Handle new features
             if size(zn, 2) > 0
+                for (i, p) in enumerate(state.particles)
+                    # Sample from proposal if not already done above
+                    if size(zn, 2) > 0
+                        p.pose = vec(rand_mvn(p.pose, p.pcov, 1))
+                        p.pcov = zeros(3, 3)
+                    end
+                    add_features!(p, zn, R)
+                end
             end
 
         else

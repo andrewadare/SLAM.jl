@@ -84,3 +84,29 @@ function pose_delta(pose1, pose2)
     return delta
 end
 
+
+function add_features!{T}(particle::Particle{T}, z::Matrix{T}, R::Matrix{T})
+    n_obs = size(z, 2)
+    new_features = zeros(2, n_obs)
+    new_fcovs = zeros(2, 2, n_obs)
+
+    for i = 1:n_obs
+        r, b = z[:,i]  # Range and bearing
+        phi = particle.pose[3]
+        s, c = sin(phi + b), cos(phi + b)
+
+        new_features[:,i] = [particle.pose[1] + r*c;
+                             particle.pose[2] + r*s]
+
+        G = [c -r*s; s r*c]
+
+        new_fcovs[:,i] = G*R*G'
+    end
+
+    nf = size(particle.features, 2)  # Current number of features
+    r = (nf + 1):(nf + n_obs)  # Range of column indices for new features
+
+    # Update the particle
+    particle.features[:,r] = new_features
+    particle.fcovs[:,:,r] = new_fcovs
+end

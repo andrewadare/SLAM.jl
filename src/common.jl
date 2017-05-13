@@ -195,7 +195,7 @@ P: covariance matrix
 n: number of samples to collect
 """
 function rand_mvn{T}(x::Vector{T}, P::Matrix{T}, n::Integer)
-    S = chol(P)'
+    S = chol(Hermitian(P))'
     X = randn(length(x), n)
     return S*X + x*ones(1, n)
 end
