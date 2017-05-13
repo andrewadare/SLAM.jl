@@ -1,24 +1,24 @@
 
+"""
+Parameters:
+
+particle: instance of a Particle
+z: Observation array with columns = [range; angle]
+tags: Identity of landmarks
+R: 2x2 observation covariance matrix
+
+Returns:
+x: proposal mean (vector)
+P: proposal covariance (matrix)
+w: proposal weight (scalar)
+"""
 function sample_proposal(particle::Particle, z, tags, R)
-    """
-    Parameters:
-
-    particle: instance of a Particle
-    z: Observation array with columns = [range; angle]
-    tags: Identity of landmarks
-    R: 2x2 observation covariance matrix
-
-    Returns:
-    x: proposal mean (vector)
-    P: proposal covariance (matrix)
-    w: proposal weight (scalar)
-    """
     x = copy(particle.pose)
     P = copy(particle.pcov)
 
     for i = 1:length(tags)
         j = tags[i]
-        zpi, Hvi, Hfi, Sf = jacobians(particle, j, R)
+        zpi, Hvi, Hfi, Sf = jacobians(particle, [j], R)
         Sfi = inv(Sf)
 
         vi = z[:,i] - zpi

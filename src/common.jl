@@ -14,8 +14,8 @@ end
 type Particle{T<:Real}
     pose::Vector{T}                    # Inferred vehicle pose e.g. [x, y, phi]
     pcov::Matrix{T}                    # Pose covariance matrix
-    features::Vector{Vector{T}}        # Feature positions
-    fcovs::Vector{Matrix{T}}           # Feature/landmark covariance matrices
+    features::Matrix{T}                # Feature positions in columns
+    fcovs::Array{T}                    # Feature/landmark covariance matrices
     weight::T                          # Weight factor for this particle
 end
 
@@ -39,7 +39,7 @@ end
 function PFSlamState{T}(nparticles::Int, initial_pose::Vector{T})
     particles = Vector{Particle{T}}(0)
     pose_ndof = length(initial_pose)
-    cov = zeros(T, pose_ndof, pose_ndof)
+    initial_cov = zeros(T, pose_ndof, pose_ndof)
 
     for i = 1:nparticles
 
@@ -47,9 +47,10 @@ function PFSlamState{T}(nparticles::Int, initial_pose::Vector{T})
         pose = initial_pose
         pcov = zeros(T, pose_ndof, pose_ndof)
 
-        # Feature/landmark positions and covariances
-        features = Vector{Vector{T}}(0)
-        fcovs = Vector{Matrix{T}}(0)
+        # Feature/landmark positions and covariances.
+        # Final index is for landmarks.
+        features = Matrix{T}(2, 0)
+        fcovs = Array{T}(2, 2, 0)
 
         # Initial weighting
         weight = 1.0/nparticles
@@ -58,7 +59,7 @@ function PFSlamState{T}(nparticles::Int, initial_pose::Vector{T})
         push!(particles, p)
     end
 
-    return PFSlamState(initial_pose, cov, nparticles, particles)
+    return PFSlamState(initial_pose, initial_cov, nparticles, particles)
 end
 
 type Vehicle{T<:Real}
@@ -253,11 +254,11 @@ function local_to_global(l, g)
 end
 
 
-function jacobians{T}(particle::Particle{T}, tags, R)
-    M = length(tags)
+function jacobians{T, U<:Integer}(particle::Particle{T}, feature_ids::Vector{U}, R)
+    M = length(feature_ids)
 
-    println(particle.features)
-    @assert length(particle.features) >= M "particle.features has length $(particle.features); tags has length $M"
+    @assert(size(particle.features, 2) >= M,
+        "$(particle.features) particle features < $M feature IDs")
 
     zp = Matrix{T}(2, M)
     Hv = Array{T}(2, 3, M)
@@ -267,19 +268,19 @@ function jacobians{T}(particle::Particle{T}, tags, R)
     for i = 1:M
         dx = particle.features[1, i] - particle.pose[1]
         dy = particle.features[2, i] - particle.pose[2]
-        d2 = dx^2 + dy^2
-        d = sqrt(d2)
+        r2 = dx^2 + dy^2
+        r = sqrt(r2)
 
         # Predicted observation
-        zp[:,i] = [d; mpi_to_pi(atan2(dy, dx) - particle.pose[3])]
+        zp[:,i] = [r; mpi_to_pi(atan2(dy, dx) - particle.pose[3])]
 
         # Jacobian matrix wrt particle state
-        Hv[:,:,i] = [-dx/d -dy/d   0;
-                     dy/d2 -dx/d2 -1]
+        Hv[:,:,i] = [-dx/r -dy/r   0;
+                     dy/r2 -dx/r2 -1]
 
         # Jacobian wrt feature state
-        Hf[:,:,i] = [ dx/d   dy/d;
-                     -dy/d2 dx/d2]
+        Hf[:,:,i] = [ dx/r   dy/r;
+                     -dy/r2 dx/r2]
 
         # Innovation covariance of feature observation given the vehicle
         Sf[:,:,i] = Hf[:,:,i] * Pf[:,:,i] * Hf[:,:,i]' + R

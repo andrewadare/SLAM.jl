@@ -71,7 +71,7 @@ function sim!(simdata::SimData,
             simdata.nz = size(simdata.z, 2)
 
             # Number of features observed so far
-            nf = length(state.particles[1].features)
+            nf = size(state.particles[1].features, 2)
 
             # Compute known data association
             zf, idf, zn = associate_known!(simdata.z, tags, da_list, nf)
