@@ -1,23 +1,25 @@
-function associate_known!(z, tags, da_list, nf)
-    """
-    Parameters:
+"""
+Parameters:
+z: Observation array with columns = [range; angle]
+tags: Identity of landmarks
+da_list: data association list
+nf: total number of features observed so far
 
-    z: Observation array with columns = [range; angle]
-    tags: Identity of landmarks
-    da_list: data association list
-    nf: total number of features observed so far
+Returns:
+zf: list of measurements corresponding to known features
+idf: list of feature IDs corresponding to known features
+zn: list of new measurements
 
-    Returns:
-    zf: list of measurements corresponding to known features
-    idf: list of feature IDs corresponding to known features
-    zn: list of new measurements
-
-    Updates da_list in-place.
-    """
-    zf = Matrix{eltype(z)}(size(z, 1), 0)  # Already-seen feature positions
-    zn = Matrix{eltype(z)}(size(z, 1), 0)  # New feature positions
-    idf = Vector{eltype(tags)}(0)  # IDs of already-seen features
-    idn = Vector{eltype(tags)}(0)  # New feature IDs
+Updates da_list in-place.
+"""
+function associate_known!{T, U<:Integer}(z::Matrix{T},
+                                         tags::Vector{U},
+                                         da_list::Vector{U},
+                                         nf::U)
+    zf = Matrix{T}(size(z, 1), 0)  # Already-seen feature positions
+    zn = Matrix{T}(size(z, 1), 0)  # New feature positions
+    known_feature_ids = Vector{U}(0)  # IDs of already-seen features
+    new_feature_ids = Vector{U}(0)  # IDs of newly-observed features
 
     # Find associations (zf) and new features (zn)
     for i = 1:length(tags)
@@ -26,17 +28,17 @@ function associate_known!(z, tags, da_list, nf)
         if da_list[ii] == 0
             # Observed a new feature - append the measurement
             zn = [zn z[:,i]]
-            idn = push!(idn, ii)
+            push!(new_feature_ids, ii)
         else
             zf = [zf z[:,i]]
-            idf = push!(idf, da_list[ii])
+            push!(known_feature_ids, da_list[ii])
         end
     end
 
     # Add new feature IDs to data association list
-    da_list[idn] = nf + (1:size(zn, 2))
+    da_list[new_feature_ids] = nf + (1:size(zn, 2))
 
-    return zf, idf, zn
+    return zf, known_feature_ids, zn
 end
 
 

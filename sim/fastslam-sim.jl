@@ -9,7 +9,7 @@ function sim!(simdata::SimData,
     n_landmarks = size(scene.landmarks, 2)
 
     # Data association list for the known DA problem (fixed number of landmarks)
-    da_list = zeros(1, n_landmarks)
+    da_list = zeros(Int, n_landmarks)
 
     d_min = 1.0                  # [m] Once inside d_min, head for next waypoint
 
@@ -67,20 +67,22 @@ function sim!(simdata::SimData,
         if dtsum > dt_obs
             dtsum = 0
             simdata.state_updated = true
-            simdata.z, tags = get_observations(vehicle, scene, R)
+
+            # Collect all landmark observations and tags within view
+            simdata.z, lm_tags = get_observations(vehicle, scene, R)
             simdata.nz = size(simdata.z, 2)
 
             # Number of features observed so far
             nf = size(state.particles[1].features, 2)
 
             # Compute known data association
-            zf, idf, zn = associate_known!(simdata.z, tags, da_list, nf)
+            zf, idf, zn = associate_known!(simdata.z, lm_tags, da_list, nf)
 
             # Update estimate of existing features
             if size(zf, 2) > 0
                 for (i, p) in enumerate(state.particles)
                     println("features: ", p.features, ", size(zf) = ", size(zf), ", nf = $nf")
-                    p.pose, p.pcov, p.weight = sample_proposal(p, zf, tags, R)
+                    p.pose, p.pcov, p.weight = sample_proposal(p, zf, lm_tags, R)
 
                     # TODO: feature_update
                 end

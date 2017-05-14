@@ -288,9 +288,6 @@ function jacobians{T, U<:Integer}(particle::Particle{T},
         Sf[:,:,i] = Hf[:,:,i] * particle.fcovs[:,:,i] * Hf[:,:,i]' + R
     end
 
-    # for a in [zp, Hv, Hf, Sf]
-    #     print(ndims(a), " ", size(a))
-    # end
     if M == 1
         return squeeze(zp, 2), squeeze(Hv, 3), squeeze(Hf, 3), squeeze(Sf, 3)
     end
