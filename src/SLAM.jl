@@ -33,7 +33,8 @@ export
     steer!,
     sample_proposal,
     step_vehicle!,
-    update
+    update,
+    update_feature_states!
 
 
 include("common.jl")

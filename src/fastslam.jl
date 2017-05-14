@@ -20,7 +20,7 @@ function sample_proposal{T, U<:Integer}(particle::Particle{T},
 
     for i = 1:length(feature_ids)
         j = feature_ids[i]
-        zpi, Hvi, Hfi, Sf = jacobians(particle, [j], R)
+        zpi, Hvi, Hfi, Sf = jacobian(particle, j, R)
         Sfi = inv(Sf)
 
         println("z: ", size(z))
@@ -60,7 +60,7 @@ w: likelihood of observation given pose
 function observation_likelihood_given_pose(particle::Particle, z, tags, R)
     w = 1.0
     for i = 1:length(tags)
-        zp, Hv, Hf, Sf = jacobians(particle, [tags[i]], R)
+        zp, Hv, Hf, Sf = jacobian(particle, tags[i], R)
         v = z[:,i] - zp
         v[2] = mpi_to_pi(v[2])
         w *= eval_mvn(reshape(v, length(v), 1), Sf)
@@ -85,6 +85,37 @@ function pose_delta(pose1, pose2)
         delta[3,i] = mpi_to_pi(delta[3,i])
     end
     return delta
+end
+
+
+"""
+Having selected a new pose from the proposal distribution, this pose is assumed
+perfect. Each feature update is computed independently and without pose
+uncertainty. The particle is modified in-place.
+
+Parameters:
+particle: instance of a Particle
+z: Observation array with columns = [range; angle]
+tags: Identity of landmarks
+R: 2x2 observation covariance matrix
+
+Returns:
+nothing
+"""
+function update_feature_states!{T, U<:Integer}(particle::Particle{T},
+                                               z::Matrix{T},
+                                               feature_ids::Vector{U},
+                                               R::Matrix{T})
+    for i = 1:length(feature_ids)
+        zp, Hv, Hf, Sf = jacobian(particle, i, R)
+        v = z[:,i] - zp
+        v[2] = mpi_to_pi(v[2])
+
+        fx, fP = particle.features[:,i], particle.fcovs[:,:,i]
+        fx, fP = kalman_cholesky_update(fx, fP, v, R, Hf)
+        particle.features[:,i], particle.fcovs[:,:,i] = fx, fP
+    end
+    return nothing
 end
 
 

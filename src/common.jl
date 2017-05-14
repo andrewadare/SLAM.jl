@@ -254,43 +254,24 @@ function local_to_global(l, g)
 end
 
 
-function jacobians{T, U<:Integer}(particle::Particle{T},
-                                  feature_ids::Vector{U},
-                                  R::Matrix{T})
-    M = length(feature_ids)
+function jacobian{T}(particle::Particle{T}, feature_id::Integer, R::Matrix{T})
+    dx = particle.features[1, feature_id] - particle.pose[1]
+    dy = particle.features[2, feature_id] - particle.pose[2]
+    r2 = dx^2 + dy^2
+    r = sqrt(r2)
 
-    @assert(size(particle.features, 2) >= M,
-        "$(particle.features) particle features < $M feature IDs")
+    # Predicted observation
+    zp = [r; mpi_to_pi(atan2(dy, dx) - particle.pose[3])]
 
-    zp = Matrix{T}(2, M)
-    Hv = Array{T}(2, 3, M)
-    Hf = Array{T}(2, 2, M)
-    Sf = Array{T}(2, 2, M)
+    # Jacobian matrix wrt particle state
+    Hv = [-dx/r -dy/r 0; dy/r2 -dx/r2 -1]
 
-    for i = 1:M
-        dx = particle.features[1, i] - particle.pose[1]
-        dy = particle.features[2, i] - particle.pose[2]
-        r2 = dx^2 + dy^2
-        r = sqrt(r2)
+    # Jacobian wrt feature state
+    Hf = [ dx/r dy/r; -dy/r2 dx/r2]
 
-        # Predicted observation
-        zp[:,i] = [r; mpi_to_pi(atan2(dy, dx) - particle.pose[3])]
+    # Innovation covariance of feature observation given the vehicle
+    Sf = Hf * particle.fcovs[:,:,feature_id] * Hf' + R
 
-        # Jacobian matrix wrt particle state
-        Hv[:,:,i] = [-dx/r -dy/r   0;
-                     dy/r2 -dx/r2 -1]
-
-        # Jacobian wrt feature state
-        Hf[:,:,i] = [ dx/r   dy/r;
-                     -dy/r2 dx/r2]
-
-        # Innovation covariance of feature observation given the vehicle
-        Sf[:,:,i] = Hf[:,:,i] * particle.fcovs[:,:,i] * Hf[:,:,i]' + R
-    end
-
-    if M == 1
-        return squeeze(zp, 2), squeeze(Hv, 3), squeeze(Hf, 3), squeeze(Sf, 3)
-    end
     return zp, Hv, Hf, Sf
 end
 

@@ -82,9 +82,9 @@ function sim!(simdata::SimData,
             if size(zf, 2) > 0
                 for (i, p) in enumerate(state.particles)
                     println("features: ", p.features, ", size(zf) = ", size(zf), ", nf = $nf")
-                    p.pose, p.pcov, p.weight = sample_proposal(p, zf, lm_tags, R)
+                    p.pose, p.pcov, p.weight = sample_proposal(p, zf, idf, R)
 
-                    # TODO: feature_update
+                    update_feature_states!(p, zf, idf, R)
                 end
 
                 # TODO: resample_particles
