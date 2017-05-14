@@ -38,9 +38,8 @@ function sample_proposal(particle::Particle, z, tags, R)
 
     prior = eval_mvn(pose_delta(particle.pose, pose_sample), particle.pcov)
     proposal =  eval_mvn(pose_delta(x, pose_sample), P)
-    w = particle.w * like * prior / proposal
-
-    return x, P, w
+    w = particle.weight * like * prior / proposal
+    return x, P, w[1,1]
 end
 
 
@@ -58,11 +57,11 @@ For FastSLAM, p(z|x) requires the map part to be marginalised from p(z|x,m)
 function observation_likelihood_given_pose(particle::Particle, z, tags, R)
     w = 1.0
     for i = 1:length(tags)
-        zp, Hv, Hf, Sf = jacobians(particle, tags[i], R)
+        zp, Hv, Hf, Sf = jacobians(particle, [tags[i]], R)
         v = z[:,i] - zp
         v[2] = mpi_to_pi(v[2])
 
-        w *= eval_mvn(v, Sf)
+        w *= eval_mvn(reshape(v, length(v), 1), Sf)
     end
     return w
 end
@@ -80,7 +79,10 @@ delta: difference
 """
 function pose_delta(pose1, pose2)
     delta = pose1 - pose2
-    delta[3,:] = mpi_to_pi[delta[3,:]]
+    println(size(delta))
+    for i = 1:size(delta, 2)
+        delta[3,i] = mpi_to_pi(delta[3,i])
+    end
     return delta
 end
 
@@ -100,13 +102,10 @@ function add_features!{T}(particle::Particle{T}, z::Matrix{T}, R::Matrix{T})
 
         G = [c -r*s; s r*c]
 
-        new_fcovs[:,i] = G*R*G'
+        new_fcovs[:,:,i] = G*R*G'
     end
 
-    nf = size(particle.features, 2)  # Current number of features
-    r = (nf + 1):(nf + n_obs)  # Range of column indices for new features
-
     # Update the particle
-    particle.features[:,r] = new_features
-    particle.fcovs[:,:,r] = new_fcovs
+    particle.features = hcat(particle.features, new_features)
+    particle.fcovs = cat(3, particle.fcovs, new_fcovs)
 end

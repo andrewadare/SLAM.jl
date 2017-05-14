@@ -216,7 +216,7 @@ a vector of (log) Gaussian values.
 """
 function eval_mvn{T}(v::Matrix{T}, vcov::Matrix{T}; eval_log=false)
     d = size(v, 1)  # Dimensionality of each innovation vector
-    chol_cov = chol(vcov)'
+    chol_cov = chol(Hermitian(vcov))'
     v_normalized = chol_cov\v
 
     # Compute vector of Gaussian exponential arguments (one entry for each
@@ -285,9 +285,15 @@ function jacobians{T, U<:Integer}(particle::Particle{T},
                      -dy/r2 dx/r2]
 
         # Innovation covariance of feature observation given the vehicle
-        Sf[:,:,i] = Hf[:,:,i] * Pf[:,:,i] * Hf[:,:,i]' + R
+        Sf[:,:,i] = Hf[:,:,i] * particle.fcovs[:,:,i] * Hf[:,:,i]' + R
     end
 
+    # for a in [zp, Hv, Hf, Sf]
+    #     print(ndims(a), " ", size(a))
+    # end
+    if M == 1
+        return squeeze(zp, 2), squeeze(Hv, 3), squeeze(Hf, 3), squeeze(Sf, 3)
+    end
     return zp, Hv, Hf, Sf
 end
 
