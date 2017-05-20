@@ -20,6 +20,9 @@ include("../sim-utils.jl")
 include("../ekfslam-sim.jl")
 include("../fastslam-sim.jl")
 
+# TODO: make this settable as a command-line argument
+const SLAM_ALGORITHM = "fastslam"  # "ekf" or "fastslam"
+
 function start(simdata::SimData,
                scene::Scene,
                vehicle::Vehicle,
@@ -82,7 +85,7 @@ function monitor(simdata::SimData,
     # Write uncertainty ellipse for vehicle position
     let
         l,u = eig(state.cov[1:2, 1:2])
-        vehicle_ellipse = [pose' sqrt(l)' atan2(u[2,1], u[1,1])]'
+        vehicle_ellipse = [pose' sqrt.(l)' atan2(u[2,1], u[1,1])]'
         ellipse_keys = ["cx", "cy", "vehicle_phi", "rx", "ry", "phi"]
         send_json("vehicle-ellipse", dict_array(vehicle_ellipse, ellipse_keys), client)
     end
@@ -160,7 +163,7 @@ function feature_ellipses(x, cov)
     for i = 1:nf
         j = (2*i + 2):(2*i + 3)
         l,u = eig(cov[j,j])
-        ellipses[:, i] = [x[j]; sqrt(l); atan2(u[2,1], u[1,1])]
+        ellipses[:, i] = [x[j]; sqrt.(l); atan2(u[2,1], u[1,1])]
     end
     ellipses
 end
@@ -228,12 +231,13 @@ wsh = WebSocketHandler() do req, client
     # It is exposed for monitoring, debugging, and flexible visualization.
     scene, simdata = sim_setup(10, "../course1.txt")
 
-    state = PFSlamState(100, initial_pose(scene))
-
-    # EKF SLAM state vector
-    # First three elements comprise the SLAM vehicle pose; state is augmented as
-    # new landmarks are observed. Covariance matrix is also augmented during simulation.
-    # state = EKFSlamState{Float64}(zeros(3), zeros(3, 3))
+    if SLAM_ALGORITHM == "fastslam"
+        state = PFSlamState(100, initial_pose(scene))
+    elseif SLAM_ALGORITHM == "ekf"
+        # First three elements comprise the SLAM vehicle pose; state is augmented as
+        # new landmarks are observed. Covariance matrix is also augmented during simulation.
+        state = EKFSlamState{Float64}(zeros(3), zeros(3, 3))
+    end
 
     vehicle = default_vehicle()
     vehicle.pose = initial_pose(scene)
