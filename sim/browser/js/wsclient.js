@@ -31,7 +31,7 @@
   var vehicle = scene.append( 'g' )
     .attr( 'class', 'vehicle' );
 
-  // Since y is up in the simulation, but upside down in SVG land, we
+  // Since y increases upward in the simulation, but downward in SVG,
   // negate phi to get the correct CCW rotation.
   function transformEllipse( d ) {
     return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
@@ -72,9 +72,11 @@
       .duration( 750 )
       .attr( 'r', 4 )
       .attr( 'cx', function( d ) {
-        return xscale( d.x ); } )
+        return xscale( d.x );
+      } )
       .attr( 'cy', function( d ) {
-        return yscale( d.y ); } )
+        return yscale( d.y );
+      } )
       .attr( 'class', 'waypoints' );
   }
 
@@ -169,15 +171,19 @@
     vehicle.selectAll( 'ellipse' )
       .data( data )
       .attr( 'rx', function( d ) {
-        return xscale( nSigma * d.rx ); } )
+        return xscale( nSigma * d.rx );
+      } )
       .attr( 'ry', function( d ) {
-        return ryscale( nSigma * d.ry ); } )
+        return ryscale( nSigma * d.ry );
+      } )
       .attr( 'transform', transformEllipse )
       .enter().append( 'ellipse' )
       .attr( 'rx', function( d ) {
-        return xscale( nSigma * d.rx ); } )
+        return xscale( nSigma * d.rx );
+      } )
       .attr( 'ry', function( d ) {
-        return ryscale( nSigma * d.ry ); } )
+        return ryscale( nSigma * d.ry );
+      } )
       .attr( 'transform', transformEllipse );
 
     vehicle.selectAll( '.lidar-sweep' )
@@ -224,6 +230,17 @@
 
   }
 
+  // Websocket message dispatch table. Keys are message.type; values are
+  // the matching draw callbacks.
+  var dispatchTable = {
+    'waypoints': drawWaypoints,
+    'landmarks': drawLandmarks,
+    'tracks': drawSimTrack,
+    'lidar': drawLidar,
+    'vehicle-ellipse': drawVehicle,
+    'feature-ellipse': drawFeatures
+  };
+
   ws.onopen = function( event ) {
     ws.send( JSON.stringify( {
       type: 'update',
@@ -234,7 +251,7 @@
     sendReset();
     resetSim();
 
-    // For prototyping - start on page load
+    // For prototyping - start sim on page load (don't wait for button)
     ws.send( JSON.stringify( {
       type: 'request',
       text: 'start',
@@ -246,26 +263,7 @@
   // Handler for messages received from server
   ws.onmessage = function( event ) {
     var msg = JSON.parse( event.data );
-    switch ( msg.type ) {
-      case 'waypoints':
-        drawWaypoints( msg.data );
-        break;
-      case 'landmarks':
-        drawLandmarks( msg.data );
-        break;
-      case 'tracks':
-        drawSimTrack( msg.data );
-        break;
-      case 'lidar':
-        drawLidar( msg.data );
-        break;
-      case 'vehicle-ellipse':
-        drawVehicle( msg.data );
-        break;
-      case 'feature-ellipses':
-        drawFeatures( msg.data );
-        break;
-    }
+    dispatchTable[ msg.type ]( msg.data );
   }
 
   d3.select( '#start' ).on( 'click', function() {

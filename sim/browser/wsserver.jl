@@ -120,7 +120,7 @@ function monitor(simdata::SimData,
     d = Dict("pose" => pose, "cov" => state.cov)
     send_json("state", d, client)
 
-    send_json("vehicle_particles", dict_array(veh_particles, ["x", "y"]), client)
+    send_json("vehicle-particles", dict_array(veh_particles, ["x", "y"]), client)
 
     # Send line endpoints for lidar beams from vehicle to observed feature
     if simdata.state_updated && simdata.nz > 0
