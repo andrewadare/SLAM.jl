@@ -2,7 +2,7 @@
 
 ## Core Types ##
 
-type Scene{T<:Real}
+mutable struct Scene{T<:Real}
     boundaries::Vector{T}              # Scene boundaries
     waypoints::Matrix{T}               # Waypoint positions
     landmarks::Matrix{T}               # True (simulated) feature positions
@@ -11,7 +11,7 @@ type Scene{T<:Real}
     nsteps::Integer                    # Timestep counter
 end
 
-type Particle{T<:Real}
+mutable struct Particle{T<:Real}
     pose::Vector{T}                    # Inferred vehicle pose e.g. [x, y, phi]
     pcov::Matrix{T}                    # Pose covariance matrix
     features::Matrix{T}                # Feature positions in columns
@@ -19,16 +19,16 @@ type Particle{T<:Real}
     weight::T                          # Weight factor for this particle
 end
 
-abstract SlamState
+abstract type SlamState end
 
 # Extended Kalman Filter SLAM state and covariance
-type EKFSlamState{T<:Real} <: SlamState
+mutable struct EKFSlamState{T<:Real} <: SlamState
     x::Vector{T}                       # Joint pose + feature state
     cov::Matrix{T}                     # Joint pose + feature cov matrix
 end
 
 # Particle Filter SLAM state
-type PFSlamState{T<:Real} <: SlamState
+mutable struct PFSlamState{T<:Real} <: SlamState
     x::Vector{T}
     cov::Matrix{T}
     nparticles::Int
@@ -226,7 +226,7 @@ function eval_mvn{T}(v::Matrix{T}, vcov::Matrix{T}; eval_log=false)
     if eval_log
         result = arg - 0.5*d*log(2pi) - sum(log(diag(chol_cov)))
     else
-        result = exp(arg)/((2pi)^(d/2)*prod(diag(chol_cov)))
+        result = exp.(arg)/((2pi)^(d/2)*prod(diag(chol_cov)))
     end
     return result
 end
@@ -483,7 +483,7 @@ function laser_lines(z, vehicle_pose)
     r, b = z[1,:], z[2,:]
 
     # x,y position of observations in local (vehicle) coordinate frame
-    xy_local = [r.*cos(b) r.*sin(b)]'
+    xy_local = [r.*cos.(b) r.*sin.(b)]'
 
     lines[3:4,:] = local_to_global(xy_local, vehicle_pose)
     return lines

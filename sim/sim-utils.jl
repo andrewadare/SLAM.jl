@@ -101,7 +101,7 @@ function get_observations(vehicle::Vehicle, scene::Scene, R)
     dy = lm[2, inearby] - y
 
     # 2 by nz observation matrix - columns are range and bearing
-    z = [sqrt(dx.^2 + dy.^2) atan2(dy, dx) - phi]'
+    z = [ sqrt.(dx.^2 + dy.^2) atan2.(dy, dx) - phi]'
 
     # Add Gaussian noise to z to simulate measurement resolution
     ncols = size(z, 2)

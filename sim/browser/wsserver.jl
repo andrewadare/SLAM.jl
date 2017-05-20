@@ -141,7 +141,7 @@ function monitor(simdata::SimData,
     # Write uncertainty ellipse for vehicle position
     let
         l,u = eig(state.cov[1:2, 1:2])
-        vehicle_ellipse = [pose' sqrt(l)' atan2(u[2,1], u[1,1])]'
+        vehicle_ellipse = [pose' sqrt.(l)' atan2(u[2,1], u[1,1])]'
         ellipse_keys = ["cx", "cy", "vehicle_phi", "rx", "ry", "phi"]
         send_json("vehicle-ellipse", dict_array(vehicle_ellipse, ellipse_keys), client)
     end
@@ -198,7 +198,7 @@ Example:
          Dict("b"=>3,"a"=>5)
          Dict("b"=>6,"a"=>8)
 """
-function dict_array{T,S}(a::Matrix{T}, keys::Vector{S})
+function dict_array{T,S}(a::Array{T}, keys::Vector{S})
     assert(length(keys) <= size(a, 1))
 
     n = size(a, 2)

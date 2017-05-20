@@ -23,7 +23,7 @@ function sample_proposal{T, U<:Integer}(particle::Particle{T},
         zpi, Hvi, Hfi, Sf = jacobian(particle, j, R)
         Sfi = inv(Sf)
 
-        println("z: ", size(z))
+        # println("z: ", size(z))
         vi = z[:,i] - zpi
         vi[2] = mpi_to_pi(vi[2])
 
