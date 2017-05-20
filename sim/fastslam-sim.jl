@@ -106,10 +106,24 @@ function sim!(simdata::SimData,
             simdata.state_updated = false
         end
 
+        # Find the highest-weight particle for visualization
+        wbest, ibest = 0, 1
+        for (i,p) in enumerate(state.particles)
+            if p.weight > wbest
+                wbest = p.weight
+                ibest = i
+            end
+        end
+
+        # Temporary!
+        state.x = state.particles[ibest].pose
+        state.cov = state.particles[ibest].pcov
+        # println(wbest, " ", ibest, fieldnames(typeof(state)))
+
         # Update vehicle tracks in scene
         scene.nsteps += 1
         scene.true_track[:, scene.nsteps] = vehicle.pose
-        scene.slam_track[:, scene.nsteps] = vehicle.pose #state.x[1:3]
+        scene.slam_track[:, scene.nsteps] = state.x
 
         monitor(monitor_args...)
 

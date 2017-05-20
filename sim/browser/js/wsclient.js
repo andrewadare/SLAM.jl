@@ -1,4 +1,4 @@
-$( function() {
+( function() {
   'use strict';
 
   // Initiate a WebSocket connection
@@ -8,34 +8,34 @@ $( function() {
   var width = 600;
   var height = width;
   var xscale = d3.scale.linear()
-      .domain([ 0, 100 ])
-      .range([ 0, width ]);
+    .domain( [ 0, 100 ] )
+    .range( [ 0, width ] );
   var yscale = d3.scale.linear()
-      .domain([ 0, 100 ])
-      .range([ height, 0 ]);
+    .domain( [ 0, 100 ] )
+    .range( [ height, 0 ] );
   var ryscale = d3.scale.linear()
-      .domain([ 0, 100 ])
-      .range([ 0, height ]);
+    .domain( [ 0, 100 ] )
+    .range( [ 0, height ] );
   var scene = d3.select( '.scene' )
-      .attr( 'width', width )
-      .attr( 'height', height );
+    .attr( 'width', width )
+    .attr( 'height', height );
 
   var simTrack = [];
   var slamTrack = [];
   var simTrackSvg = scene.append( 'g' )
-      .attr( 'class', 'simtrack');
+    .attr( 'class', 'simtrack' );
   var slamTrackSvg = scene.append( 'g' )
-      .attr( 'class', 'slamtrack');
+    .attr( 'class', 'slamtrack' );
   var lidarLines = scene.append( 'g' )
-      .attr( 'class', 'lidar-lines' );
+    .attr( 'class', 'lidar-lines' );
   var vehicle = scene.append( 'g' )
-      .attr( 'class', 'vehicle' );
+    .attr( 'class', 'vehicle' );
 
   // Since y is up in the simulation, but upside down in SVG land, we
   // negate phi to get the correct CCW rotation.
   function transformEllipse( d ) {
     return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
-           'rotate(' + -d.phi*180/Math.PI + ')';
+      'rotate(' + -d.phi * 180 / Math.PI + ')';
   }
 
   function xyTranslate( d ) {
@@ -58,22 +58,24 @@ $( function() {
     ws.send( JSON.stringify( {
       type: 'request',
       text: 'reset',
-      id:   2,
+      id: 2,
       date: Date.now()
-    }));
+    } ) );
   }
 
   function drawWaypoints( data ) {
     scene.selectAll( '.waypoints' )
-        .data( data )
+      .data( data )
       .enter().append( 'circle' )
-        .attr( 'r', 0 )
-        .transition()
-        .duration( 750 )
-        .attr( 'r', 4 )
-        .attr( 'cx', function( d ) { return xscale( d.x ); })
-        .attr( 'cy', function( d ) { return yscale( d.y ); })
-        .attr( 'class', 'waypoints' );
+      .attr( 'r', 0 )
+      .transition()
+      .duration( 750 )
+      .attr( 'r', 4 )
+      .attr( 'cx', function( d ) {
+        return xscale( d.x ); } )
+      .attr( 'cy', function( d ) {
+        return yscale( d.y ); } )
+      .attr( 'class', 'waypoints' );
   }
 
   function drawLandmarks( data ) {
@@ -81,12 +83,12 @@ $( function() {
     var l = 10; // Edge length of square
 
     var landmarks = scene.selectAll( 'g .landmarks' )
-        .data( data )
+      .data( data )
       .enter().append( 'g' )
-        .attr( 'class', 'landmarks' )
-        .attr( 'transform', function( d ) {
-          return 'translate(' + (xscale( d.x ) - l/2) + ',' + (yscale( d.y ) - l/2) + ')';
-        });
+      .attr( 'class', 'landmarks' )
+      .attr( 'transform', function( d ) {
+        return 'translate(' + ( xscale( d.x ) - l / 2 ) + ',' + ( yscale( d.y ) - l / 2 ) + ')';
+      } );
 
     landmarks.append( 'rect' )
       .attr( 'width', 0 )
@@ -95,8 +97,8 @@ $( function() {
       .duration( 750 )
       .attr( 'width', l )
       .attr( 'height', l )
-      .attr( 'rx', l/10)
-      .attr( 'ry', l/10);
+      .attr( 'rx', l / 10 )
+      .attr( 'ry', l / 10 );
   }
 
 
@@ -105,12 +107,12 @@ $( function() {
     simTrack.push( {
       'x': xscale( data.ideal.x ),
       'y': yscale( data.ideal.y )
-    });
+    } );
 
     slamTrack.push( {
       'x': xscale( data.slam.x ),
       'y': yscale( data.slam.y )
-    });
+    } );
 
     var n = simTrack.length;
 
@@ -146,7 +148,7 @@ $( function() {
         .each( 'end', function() {
           d3.select( this )
             .remove();
-        });
+        } );
     }
   }
 
@@ -154,44 +156,49 @@ $( function() {
     var nSigma = 2;
 
     var arc = d3.svg.arc()
-      .innerRadius(20)
-      .outerRadius(xscale( 30 ))
+      .innerRadius( 20 )
+      .outerRadius( xscale( 30 ) )
       .startAngle( 0 )
       .endAngle( Math.PI );
 
     function arcTransform( d ) {
       return 'translate(' + xscale( d.cx ) + ',' + yscale( d.cy ) + ') ' +
-             'rotate(' + -d.vehicle_phi*180/Math.PI + ')';
+        'rotate(' + -d.vehicle_phi * 180 / Math.PI + ')';
     }
 
     vehicle.selectAll( 'ellipse' )
-        .data( data )
-        .attr( 'rx', function( d ) { return xscale( nSigma*d.rx ); } )
-        .attr( 'ry', function( d ) { return ryscale( nSigma*d.ry ); } )
-        .attr( 'transform', transformEllipse )
+      .data( data )
+      .attr( 'rx', function( d ) {
+        return xscale( nSigma * d.rx ); } )
+      .attr( 'ry', function( d ) {
+        return ryscale( nSigma * d.ry ); } )
+      .attr( 'transform', transformEllipse )
       .enter().append( 'ellipse' )
-        .attr( 'rx', function( d ) { return xscale( nSigma*d.rx ); } )
-        .attr( 'ry', function( d ) { return ryscale( nSigma*d.ry ); } )
-        .attr( 'transform', transformEllipse );
+      .attr( 'rx', function( d ) {
+        return xscale( nSigma * d.rx ); } )
+      .attr( 'ry', function( d ) {
+        return ryscale( nSigma * d.ry ); } )
+      .attr( 'transform', transformEllipse );
 
     vehicle.selectAll( '.lidar-sweep' )
-        .data( data )
-        .attr( 'd', arc )
-        .attr( 'transform', arcTransform )
+      .data( data )
+      .attr( 'd', arc )
+      .attr( 'transform', arcTransform )
       .enter().append( 'path' )
-        .attr( 'class', 'lidar-sweep')
-        .attr( 'd', arc )
-        .attr( 'transform', arcTransform );
+      .attr( 'class', 'lidar-sweep' )
+      .attr( 'd', arc )
+      .attr( 'transform', arcTransform );
   }
 
   function drawFeatures( data ) {
     var nSigma = 2;
 
     function rx( d ) {
-      return xscale( nSigma*d.rx );
+      return xscale( nSigma * d.rx );
     }
+
     function ry( d ) {
-      return ryscale( nSigma*d.ry );
+      return ryscale( nSigma * d.ry );
     }
 
     // Display feature symbols
@@ -221,17 +228,25 @@ $( function() {
     ws.send( JSON.stringify( {
       type: 'update',
       text: 'ready',
-      id:   0,
+      id: 0,
       date: Date.now()
-    }));
+    } ) );
     sendReset();
     resetSim();
+
+    // For prototyping - start on page load
+    ws.send( JSON.stringify( {
+      type: 'request',
+      text: 'start',
+      id: 1,
+      date: Date.now()
+    } ) );
   }
 
   // Handler for messages received from server
   ws.onmessage = function( event ) {
     var msg = JSON.parse( event.data );
-    switch( msg.type ) {
+    switch ( msg.type ) {
       case 'waypoints':
         drawWaypoints( msg.data );
         break;
@@ -257,23 +272,23 @@ $( function() {
     ws.send( JSON.stringify( {
       type: 'request',
       text: 'start',
-      id:   1,
+      id: 1,
       date: Date.now()
-    }));
-  });
+    } ) );
+  } );
 
   d3.select( '#pause' ).on( 'click', function() {
     ws.send( JSON.stringify( {
       type: 'request',
       text: 'pause',
-      id:   3,
+      id: 3,
       date: Date.now()
-    }));
-  });
+    } ) );
+  } );
 
   d3.select( '#reset' ).on( 'click', function() {
     sendReset();
     resetSim();
-  });
+  } );
 
-});
+} )();

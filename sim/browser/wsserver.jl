@@ -20,7 +20,7 @@ include("../sim-utils.jl")
 include("../ekfslam-sim.jl")
 include("../fastslam-sim.jl")
 
-# TODO: make this settable as a command-line argument
+# TODO: make this settable as a command-line argument, or selectable on the page
 const SLAM_ALGORITHM = "fastslam"  # "ekf" or "fastslam"
 
 function start(simdata::SimData,
@@ -107,18 +107,20 @@ function monitor(simdata::SimData,
 
     n = scene.nsteps
     tt, st = scene.true_track, scene.slam_track
-    pose = state.x[1:3]
-
-    # The 5 parameters for a rotated covariance ellipse
+    pose = state.x
+    veh_particles = reshape(vcat([p.pose for p in state.particles]...),
+        (length(pose), state.nparticles))
 
     # Send latest pose information
     d = Dict("ideal" => Dict("x" => tt[1, n], "y" => tt[2, n], "phi" => tt[3, n]),
              "slam"  => Dict("x" => st[1, n], "y" => st[2, n], "phi" => st[3, n]))
     send_json("tracks", d, client)
 
-    # Send SLAM state
+    # Send pose/covariance estimate
     d = Dict("pose" => pose, "cov" => state.cov)
     send_json("state", d, client)
+
+    send_json("vehicle_particles", dict_array(veh_particles, ["x", "y"]), client)
 
     # Send line endpoints for lidar beams from vehicle to observed feature
     if simdata.state_updated && simdata.nz > 0
@@ -136,6 +138,7 @@ function monitor(simdata::SimData,
         # Write feature uncertainty ellipses
         if length(state.x) > 3
             ellipses = feature_ellipses(state.x, state.cov)
+            # The 5 parameters for a rotated covariance ellipse
             ellipse_keys = ["cx", "cy", "rx", "ry", "phi"]
             send_json("feature-ellipses", dict_array(ellipses, ellipse_keys), client)
         end
@@ -216,7 +219,7 @@ function dict_array{T,S}(a::Array{T}, keys::Vector{S})
         end
         da[j] = d
     end
-    da
+    return da
 end
 
 
@@ -308,7 +311,6 @@ httph = HttpHandler() do req::Request, res::Response
 
     files = [
     "index.html",
-    "js/jquery-2.1.3.min.js",
     "js/d3.min.js",
     "js/wsclient.js"
     ]
