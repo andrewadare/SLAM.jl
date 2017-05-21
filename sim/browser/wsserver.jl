@@ -121,7 +121,7 @@ function monitor(simdata::SimData,
     send_json("state", d, client)
 
     # Send vehicle particle positions. `phi` excluded for now
-    # send_json("vehicle-particles", dict_array(veh_particles, ["x", "y"]), client)
+    send_json("vehicle-particles", dict_array(veh_particles, ["x", "y"]), client)
 
     # Send line endpoints for lidar beams from vehicle to observed feature
     if simdata.state_updated && simdata.nz > 0
@@ -310,19 +310,7 @@ httph = HttpHandler() do req::Request, res::Response
         return Response(readstring("index.html"))
     end
 
-    # files = [
-    #     "index.html",
-    #     "js/d3.min.js",
-    #     "js/assert.js",
-    #     "js/wsclient.js"
-    #     ]
-
-    # for file in files
-    #     if startswith("/$file", req.resource)
-    #         println("serving /", file)
-    #         return Response(open(readstring, file))
-    #     end
-    # end
+    # Serve requested file if found, else return a 404.
     for (root, dirs, files) in walkdir(".")
         for file in files
             file = replace(joinpath(root, file), "./", "")
@@ -332,12 +320,11 @@ httph = HttpHandler() do req::Request, res::Response
             end
         end
     end
-
     return Response(404)
 end
 
 httph.events["error"]  = (client, err) -> println(err)
-httph.events["listen"] = (port)        -> println("Listening on $port...")
+httph.events["listen"] = (port) -> println("Listening on $port...")
 
 # Instantiate and start a websockets/http server
 server = Server(httph, wsh)

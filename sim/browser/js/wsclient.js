@@ -64,7 +64,7 @@
   }
 
   function drawWaypoints( data ) {
-    scene.selectAll( '.waypoints' )
+    scene.selectAll( '.waypoint' )
       .data( data )
       .enter().append( 'circle' )
       .attr( 'r', 0 )
@@ -77,7 +77,7 @@
       .attr( 'cy', function( d ) {
         return yscale( d.y );
       } )
-      .attr( 'class', 'waypoints' );
+      .attr( 'class', 'waypoint' );
   }
 
   function drawLandmarks( data ) {
@@ -233,6 +233,12 @@
   function drawVehicleParticles( data ) {
     scene.selectAll( '.vehicle-particle' )
       .data( data )
+      .attr( 'cx', function( d ) {
+        return xscale( d.x );
+      } )
+      .attr( 'cy', function( d ) {
+        return yscale( d.y );
+      } )
       .enter().append( 'circle' )
       .attr( 'r', 2 )
       .attr( 'cx', function( d ) {
