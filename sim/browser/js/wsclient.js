@@ -230,6 +230,21 @@
 
   }
 
+  function drawVehicleParticles( data ) {
+    scene.selectAll( '.vehicle-particle' )
+      .data( data )
+      .enter().append( 'circle' )
+      .attr( 'r', 2 )
+      .attr( 'cx', function( d ) {
+        return xscale( d.x );
+      } )
+      .attr( 'cy', function( d ) {
+        return yscale( d.y );
+      } )
+      .attr( 'class', 'vehicle-particle' );
+  }
+
+
   // Websocket message dispatch table. Keys are message.type; values are
   // the matching draw callbacks.
   var dispatchTable = {
@@ -238,7 +253,8 @@
     'tracks': drawSimTrack,
     'lidar': drawLidar,
     'vehicle-ellipse': drawVehicle,
-    'feature-ellipse': drawFeatures
+    'feature-ellipse': drawFeatures,
+    'vehicle-particles': drawVehicleParticles
   };
 
   ws.onopen = function( event ) {
@@ -263,7 +279,13 @@
   // Handler for messages received from server
   ws.onmessage = function( event ) {
     var msg = JSON.parse( event.data );
-    dispatchTable[ msg.type ]( msg.data );
+
+    // assert && assert( dispatchTable.hasOwnProperty( msg.type ),
+    //   'No callback for msg.type = \'' + msg.type + '\'');
+
+    if ( dispatchTable.hasOwnProperty( msg.type ) ) {
+      dispatchTable[ msg.type ]( msg.data );
+    }
   }
 
   d3.select( '#start' ).on( 'click', function() {
