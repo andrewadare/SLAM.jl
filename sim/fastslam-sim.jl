@@ -118,7 +118,6 @@ function sim!(simdata::SimData,
         # Temporary!
         state.x = state.particles[ibest].pose
         state.cov = state.particles[ibest].pcov
-        # println(wbest, " ", ibest, fieldnames(typeof(state)))
 
         # Update vehicle tracks in scene
         scene.nsteps += 1
