@@ -258,14 +258,18 @@
   };
 
   ws.onopen = function( event ) {
-    ws.send( JSON.stringify( {
-      type: 'update',
-      text: 'ready',
-      id: 0,
-      date: Date.now()
-    } ) );
-    sendReset();
-    resetSim();
+    try {
+      ws.send( JSON.stringify( {
+        type: 'update',
+        text: 'ready',
+        id: 0,
+        date: Date.now()
+      } ) );
+      sendReset();
+      resetSim();
+    } catch ( e ) {
+      console.log( e );
+    }
 
     // For prototyping - start sim on page load (don't wait for button)
     ws.send( JSON.stringify( {
