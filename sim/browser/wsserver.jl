@@ -120,7 +120,8 @@ function monitor(simdata::SimData,
     d = Dict("pose" => pose, "cov" => state.cov)
     send_json("state", d, client)
 
-    send_json("vehicle-particles", dict_array(veh_particles, ["x", "y"]), client)
+    # Send vehicle particle positions. `phi` excluded for now
+    # send_json("vehicle-particles", dict_array(veh_particles, ["x", "y"]), client)
 
     # Send line endpoints for lidar beams from vehicle to observed feature
     if simdata.state_updated && simdata.nz > 0
@@ -297,9 +298,9 @@ end
 
 
 """
-Serve page(s) and supporting files over HTTP.
-Files will not be loaded by browser unless they appear in this list!
-Paths are relative to the location of this script (or invocation location?)
+Serve page(s) and supporting files over HTTP. Assumes the server is started
+from the location of this script. Searches through server root directory and
+subdirectories recursively for the requested resource.
 """
 httph = HttpHandler() do req::Request, res::Response
 
@@ -309,20 +310,30 @@ httph = HttpHandler() do req::Request, res::Response
         return Response(readstring("index.html"))
     end
 
-    files = [
-    "index.html",
-    "js/d3.min.js",
-    "js/wsclient.js"
-    ]
+    # files = [
+    #     "index.html",
+    #     "js/d3.min.js",
+    #     "js/assert.js",
+    #     "js/wsclient.js"
+    #     ]
 
-    for file in files
-        if startswith("/$file", req.resource)
-            println("serving /", file)
-            return Response(open(readstring, file))
+    # for file in files
+    #     if startswith("/$file", req.resource)
+    #         println("serving /", file)
+    #         return Response(open(readstring, file))
+    #     end
+    # end
+    for (root, dirs, files) in walkdir(".")
+        for file in files
+            file = replace(joinpath(root, file), "./", "")
+            if startswith("/$file", req.resource)
+                println("serving ", file)
+                return Response(open(readstring, file))
+            end
         end
     end
 
-    Response(404)
+    return Response(404)
 end
 
 httph.events["error"]  = (client, err) -> println(err)
