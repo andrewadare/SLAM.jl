@@ -240,7 +240,7 @@
         return yscale( d.y );
       } )
       .enter().append( 'circle' )
-      .attr( 'r', 2 )
+      .attr( 'r', 1 )
       .attr( 'cx', function( d ) {
         return xscale( d.x );
       } )
@@ -248,6 +248,26 @@
         return yscale( d.y );
       } )
       .attr( 'class', 'vehicle-particle' );
+  }
+
+  function drawLandmarkParticles( data ) {
+    scene.selectAll( '.landmark-particle' )
+      .data( data )
+      .attr( 'cx', function( d ) {
+        return xscale( d.x );
+      } )
+      .attr( 'cy', function( d ) {
+        return yscale( d.y );
+      } )
+      .enter().append( 'circle' )
+      .attr( 'r', 1 )
+      .attr( 'cx', function( d ) {
+        return xscale( d.x );
+      } )
+      .attr( 'cy', function( d ) {
+        return yscale( d.y );
+      } )
+      .attr( 'class', 'landmark-particle' );
   }
 
 
@@ -260,7 +280,8 @@
     'lidar': drawLidar,
     'vehicle-ellipse': drawVehicle,
     'feature-ellipse': drawFeatures,
-    'vehicle-particles': drawVehicleParticles
+    'vehicle-particles': drawVehicleParticles,
+    'landmark-particles': drawLandmarkParticles
   };
 
   ws.onopen = function( event ) {

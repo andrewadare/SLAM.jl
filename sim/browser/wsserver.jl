@@ -50,14 +50,13 @@ function monitor(simdata::SimData,
     tt, st = scene.true_track, scene.slam_track
     pose = state.x[1:3]
 
-    # The 5 parameters for a rotated covariance ellipse
-
     # Send latest pose information
     d = Dict("ideal" => Dict("x" => tt[1, n], "y" => tt[2, n], "phi" => tt[3, n]),
              "slam"  => Dict("x" => st[1, n], "y" => st[2, n], "phi" => st[3, n]))
     send_json("tracks", d, client)
 
     # Send SLAM state
+    # TODO: is this used?
     d = Dict("pose" => pose, "cov" => state.cov)
     send_json("state", d, client)
 
@@ -108,19 +107,15 @@ function monitor(simdata::SimData,
     n = scene.nsteps
     tt, st = scene.true_track, scene.slam_track
     pose = state.x
-    veh_particles = reshape(vcat([p.pose for p in state.particles]...),
-        (length(pose), state.nparticles))
 
     # Send latest pose information
     d = Dict("ideal" => Dict("x" => tt[1, n], "y" => tt[2, n], "phi" => tt[3, n]),
              "slam"  => Dict("x" => st[1, n], "y" => st[2, n], "phi" => st[3, n]))
     send_json("tracks", d, client)
 
-    # Send pose/covariance estimate
-    d = Dict("pose" => pose, "cov" => state.cov)
-    send_json("state", d, client)
-
     # Send vehicle particle positions. `phi` excluded for now
+    veh_particles = reshape(vcat([p.pose for p in state.particles]...),
+        (length(pose), state.nparticles))
     send_json("vehicle-particles", dict_array(veh_particles, ["x", "y"]), client)
 
     # Send line endpoints for lidar beams from vehicle to observed feature
@@ -143,6 +138,9 @@ function monitor(simdata::SimData,
             ellipse_keys = ["cx", "cy", "rx", "ry", "phi"]
             send_json("feature-ellipses", dict_array(ellipses, ellipse_keys), client)
         end
+
+        lm_particles = hcat([p.features for p in state.particles]...)
+        send_json("landmark-particles", dict_array(lm_particles, ["x", "y"]), client)
     end
 
     # Write uncertainty ellipse for vehicle position

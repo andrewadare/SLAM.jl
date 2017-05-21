@@ -33,7 +33,7 @@ function default_vehicle()
     v.sensor_range = 30          # [m] Landmark detection radius
     v.shape = [1. -1 -1; 0 1 -1] # A little triangle for visualization
     # v.pose = initial_pose(scene)
-    v.target_speed = 8           # [m/s]
+    v.target_speed = 5           # [m/s]
     v.waypoint_id = 1            # Initialize to index of first waypoint
     return v
 end

@@ -15,7 +15,7 @@ function sim!(simdata::SimData,
 
     # Simulated control noise covariance matrix
     sigma_speed = 0.5            # [m/s] Uncertainty about target speed
-    sigma_steer = (3.0*pi/180)   # [rad] Uncertainty about target gamma
+    sigma_steer = (5.0*pi/180)   # [rad] Uncertainty about target gamma
     Q = [sigma_speed^2 0;        # Process covariance matrix
          0 sigma_steer^2]
 
@@ -82,6 +82,8 @@ function sim!(simdata::SimData,
             if size(zf, 2) > 0
                 for (i, p) in enumerate(state.particles)
                     # println("features: ", p.features, ", size(zf) = ", size(zf), ", nf = $nf")
+
+                    # Particle list is updated since p is a reference
                     p.pose, p.pcov, p.weight = sample_proposal(p, zf, idf, R)
 
                     update_feature_states!(p, zf, idf, R)
@@ -115,7 +117,6 @@ function sim!(simdata::SimData,
             end
         end
 
-        # Temporary!
         state.x = state.particles[ibest].pose
         state.cov = state.particles[ibest].pcov
 
