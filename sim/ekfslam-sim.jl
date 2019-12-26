@@ -12,17 +12,17 @@ function sim!(simdata::SimData,
 
     # Simulated control noise covariance matrix
     sigma_speed = 0.5                  # [m/s] Uncertainty about target speed
-    sigma_steer = (3.0*pi/180)         # [rad] Uncertainty about target gamma
+    sigma_steer = (3.0 * pi / 180)         # [rad] Uncertainty about target gamma
     Q = [sigma_speed^2 0; 0 sigma_steer^2]
 
     # Simulated observation noise covariance matrix
     sigmaR = 0.1                       # [m] Range uncertainty
-    sigmaB = (1.0*pi/180)              # [rad] Bearing angle uncertainty
+    sigmaB = (1.0 * pi / 180)              # [rad] Bearing angle uncertainty
     R = [sigmaR^2 0; 0 sigmaB^2]       # Obs. covariance matrix
 
     # Timing variables
     dt = 0.025                         # [s] Interval between control updates
-    dt_obs = 8*dt                      # [s] Interval between state updates
+    dt_obs = 8 * dt                      # [s] Interval between state updates
     dtsum = 0                          # Time since last observation
     marker = time()
 

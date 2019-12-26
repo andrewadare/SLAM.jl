@@ -126,7 +126,7 @@ end
 
 function draw_landmark_ellipses(ellipses)
 
-    n = floor(Int, size(ellipses,1)/2)
+    n = floor(Int, size(ellipses, 1) / 2)
     if n == 0
         return
     end
@@ -135,7 +135,7 @@ function draw_landmark_ellipses(ellipses)
     GR.setlinecolorind(1)
 
     for i = 1:n
-        GR.polyline(vec(ellipses[2i-1,:]), vec(ellipses[2i,:]))
+        GR.polyline(vec(ellipses[2i - 1,:]), vec(ellipses[2i,:]))
     end
 end
 

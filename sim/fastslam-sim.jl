@@ -15,19 +15,19 @@ function sim!(simdata::SimData,
 
     # Simulated control noise covariance matrix
     sigma_speed = 0.5            # [m/s] Uncertainty about target speed
-    sigma_steer = (5.0*pi/180)   # [rad] Uncertainty about target gamma
+    sigma_steer = (5.0 * pi / 180)   # [rad] Uncertainty about target gamma
     Q = [sigma_speed^2 0;        # Process covariance matrix
          0 sigma_steer^2]
 
     # Simulated observation noise covariance matrix
     sigmaR = 0.1                 # [m] Range uncertainty
-    sigmaB = (1.0*pi/180)        # [rad] Bearing angle uncertainty
+    sigmaB = (1.0 * pi / 180)        # [rad] Bearing angle uncertainty
     R = [sigmaR^2 0;             # Obs. covariance matrix
          0 sigmaB^2]
 
     # Timing variables
     dt = 0.025                   # [s] Interval between control updates
-    dt_obs = 8*dt                # [s] Interval between state updates
+    dt_obs = 8 * dt                # [s] Interval between state updates
     dtsum = 0                    # Time since last observation
     marker = time()
 
@@ -56,8 +56,8 @@ function sim!(simdata::SimData,
 
             # Simulate an IMU heading measurement with 2 degree uncertainty
             # and fuse it into the state estimate
-            sigma_phi = 2*pi/180
-            phi_imu = vehicle.pose[3] + sigma_phi*randn()
+            sigma_phi = 2 * pi / 180
+            phi_imu = vehicle.pose[3] + sigma_phi * randn()
             p.pose, p.pcov = fuse_heading_measurement(p.pose, p.pcov, phi_imu, sigma_phi)
         end
 
@@ -110,7 +110,7 @@ function sim!(simdata::SimData,
 
         # Find the highest-weight particle for visualization
         wbest, ibest = 0, 1
-        for (i,p) in enumerate(state.particles)
+        for (i, p) in enumerate(state.particles)
             if p.weight > wbest
                 wbest = p.weight
                 ibest = i

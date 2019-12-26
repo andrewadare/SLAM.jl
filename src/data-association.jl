@@ -12,7 +12,7 @@ zn: list of new measurements
 
 Updates da_list in-place.
 """
-function associate_known!{T, U<:Integer}(z::Matrix{T},
+function associate_known!{T,U <: Integer}(z::Matrix{T},
                                          tags::Vector{U},
                                          da_list::Vector{U},
                                          nf::U)
@@ -56,12 +56,12 @@ function associate(state::SlamState, z, R, gate1, gate2)
     idf = Array{Int}(1, 0)
 
     Nxv = 3 # number of vehicle pose components [x, y, phi]
-    Nf = round(Int, (length(x) - Nxv)/2) # number of features already in map
+    Nf = round(Int, (length(x) - Nxv) / 2) # number of features already in map
 
     # linear search for nearest-neighbour, no clever tricks (like a quick
     # bounding-box threshold to remove distant features; or, better yet,
     # a balanced k-d tree lookup). TODO: implement clever tricks.
-    for i = 1:size(z,2)
+    for i = 1:size(z, 2)
         jbest = 0
         nbest = Inf
         outer = Inf
@@ -99,8 +99,8 @@ function compute_association(x, P, z, R, idf)
     zp, H = predict_observation(x, idf)
     v = z - zp
     v[2] = mpi_to_pi(v[2])
-    S = H*P*H' + R
-    nis = dot(v, inv(S)*v)
+    S = H * P * H' + R
+    nis = dot(v, inv(S) * v)
     nd = nis + log(det(S))
     nis, nd
 end
